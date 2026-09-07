@@ -35,7 +35,7 @@
 
 ## Phase B1 — Work items, first usable (3–5 days, ref `docs/02 §2.3-2.4`, `docs/03 §3.1-3.2`, `docs/04 §4.4`)
 
-- [ ] B1.1 Models: Project, ProjectMember(+Invite,Identifier), State, Label, Estimate(+Point), IssueType(+ProjectIssueType), Issue(+Sequence,Assignee,Label,Relation,Blocker,Link,Attachment,Comment,Activity,Subscriber,Reaction,Vote,Version) — partial uniques in migration `WHERE deletedAt IS NULL`
+- [x] B1.1 Models: Label (+tree, partial uniques in SQL), Estimate(+Point), IssueType(+ProjectIssueType), Issue(+Sequence/Assignee/Label/Relation/Blocker/Link/Attachment/Comment/Activity/Subscriber/Reaction/Vote/Version), IssueView + migration `20260907112902_b1_issues` (partial indexes for labels/estimates; project/state/identifier partials deferred to B5)
 - [ ] B1.2 Rules: `Project.identifier` upper/trim unique/workspace; `Issue.create` TX (lock `ProjectIdentifier FOR UPDATE`, `sequenceId=max+1`, `IssueSequence` never reuse, default-state fallback, `sortOrder=MAX+10000`); `completedAt` hook on `stateId` change; `issueVisible()` scope (exclude deleted/triage/archived/draft)
 - [ ] B1.3 Issue endpoints: `GET|POST /.../issues/`, `POST /.../issues/list/` (filters), `GET|PUT|PATCH|DELETE /.../issues/:id/`, `GET /.../work-items/:IDENT-:SEQ/`, bulk-delete/archive, archived/deleted lists, archive/unarchive, sub-issues, links, attachments (local `./uploads`, 5MB), comments, reactions, history, subscribe, relation, meta, versions (`IssueActivity` fanout on every mutation)
 - [ ] B1.4 Taxonomy endpoints `docs/04 §4.5`: states (+mark-default), labels, estimates (+points), issue-types

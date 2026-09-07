@@ -28,6 +28,28 @@ enum Network {
   Public
 }
 
+enum Priority {
+  urgent
+  high
+  medium
+  low
+  none
+}
+
+enum EstimateType {
+  categories
+  points
+}
+
+enum IssueRelationType {
+  duplicate
+  relates_to
+  blocked_by
+  start_before
+  finish_before
+  implemented_by
+}
+
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   username     String    @unique
@@ -232,6 +254,7 @@ model State {
   deletedAt   DateTime?
 
   defaultFor Project[] @relation("ProjectDefaultState")
+  issues     Issue[]
 
   @@unique([name, projectId])
   @@map("states")
@@ -263,4 +286,297 @@ model ProjectMemberInvite {
   role      Role    @default(MEMBER)
 
   @@map("project_member_invites")
+}
+
+// ---------- B1: taxonomy ----------
+
+model Label {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  projectId   String?   @db.Uuid
+  parentId    String?   @db.Uuid
+  parent      Label?    @relation("LabelTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Label[]   @relation("LabelTree")
+  name        String
+  description String    @default("")
+  color       String    @default("")
+  sortOrder   Float     @default(65535)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("labels")
+}
+
+model Estimate {
+  id          String       @id @default(uuid()) @db.Uuid
+  projectId   String       @db.Uuid
+  workspaceId String       @db.Uuid
+  name        String
+  type        EstimateType @default(categories)
+  lastUsed    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  points EstimatePoint[]
+
+  @@map("estimates")
+}
+
+model EstimatePoint {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  workspaceId String   @db.Uuid
+  estimateId  String   @db.Uuid
+  estimate    Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  key         Int      @default(0)
+  value       String   @default("")
+  description String   @default("")
+
+  issues Issue[]
+
+  @@map("estimate_points")
+}
+
+model IssueType {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  description String   @default("")
+  isEpic      Boolean  @default(false)
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  level       Float    @default(0)
+
+  @@map("issue_types")
+}
+
+model ProjectIssueType {
+  id          String  @id @default(uuid()) @db.Uuid
+  projectId   String  @db.Uuid
+  workspaceId String  @db.Uuid
+  issueTypeId String  @db.Uuid
+  level       Int     @default(0)
+  isDefault   Boolean @default(false)
+
+  @@unique([projectId, issueTypeId])
+  @@map("project_issue_types")
+}
+
+// ---------- B1: issues ----------
+
+model Issue {
+  id                String         @id @default(uuid()) @db.Uuid
+  projectId         String         @db.Uuid
+  workspaceId       String         @db.Uuid
+  parentId          String?        @db.Uuid
+  parent            Issue?         @relation("IssueTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children          Issue[]        @relation("IssueTree")
+  stateId           String?        @db.Uuid
+  state             State?         @relation(fields: [stateId], references: [id], onDelete: Cascade)
+  typeId            String?        @db.Uuid
+  estimatePointId   String?        @db.Uuid
+  estimatePoint     EstimatePoint? @relation(fields: [estimatePointId], references: [id], onDelete: SetNull)
+  name              String         @default("")
+  descriptionJson   Json           @default("{}")
+  descriptionHtml   String         @default("<p></p>")
+  descriptionStripped String?
+  priority          Priority       @default(none)
+  startDate         DateTime?      @db.Date
+  targetDate        DateTime?      @db.Date
+  sequenceId        Int            @default(1)
+  sortOrder         Float          @default(65535)
+  completedAt       DateTime?
+  archivedAt        DateTime?      @db.Date
+  isDraft           Boolean        @default(false)
+  point             Int?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+
+  @@index([projectId, sequenceId])
+  @@index([projectId, stateId])
+  @@map("issues")
+}
+
+model IssueSequence {
+  id        String  @id @default(uuid()) @db.Uuid
+  projectId String  @db.Uuid
+  workspaceId String @db.Uuid
+  issueId   String? @unique @db.Uuid
+  sequence  BigInt  @default(1)
+  deleted   Boolean @default(false)
+
+  @@map("issue_sequences")
+}
+
+model IssueAssignee {
+  issueId    String @db.Uuid
+  assigneeId String @db.Uuid
+
+  @@id([issueId, assigneeId])
+  @@map("issue_assignees")
+}
+
+model IssueLabel {
+  issueId String @db.Uuid
+  labelId String @db.Uuid
+
+  @@id([issueId, labelId])
+  @@map("issue_labels")
+}
+
+model IssueRelation {
+  id             String            @id @default(uuid()) @db.Uuid
+  projectId      String            @db.Uuid
+  workspaceId    String            @db.Uuid
+  issueId        String            @db.Uuid
+  relatedIssueId String            @db.Uuid
+  relationType   IssueRelationType @default(blocked_by)
+
+  @@unique([issueId, relatedIssueId])
+  @@map("issue_relations")
+}
+
+model IssueBlocker {
+  id          String @id @default(uuid()) @db.Uuid
+  projectId   String @db.Uuid
+  workspaceId String @db.Uuid
+  blockId     String @db.Uuid
+  blockedById String @db.Uuid
+
+  @@map("issue_blockers")
+}
+
+model IssueComment {
+  id             String    @id @default(uuid()) @db.Uuid
+  projectId      String    @db.Uuid
+  workspaceId    String    @db.Uuid
+  issueId        String    @db.Uuid
+  parentId       String?   @db.Uuid
+  actorId        String?   @db.Uuid
+  commentJson    Json      @default("{}")
+  commentHtml    String    @default("<p></p>")
+  commentStripped String   @default("")
+  access         String    @default("INTERNAL")
+  editedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  @@index([issueId])
+  @@map("issue_comments")
+}
+
+model IssueAttachment {
+  id         String @id @default(uuid()) @db.Uuid
+  issueId    String @db.Uuid
+  attributes Json   @default("{}")
+  asset      String
+  createdAt  DateTime @default(now())
+
+  @@index([issueId])
+  @@map("issue_attachments")
+}
+
+model IssueLink {
+  id       String @id @default(uuid()) @db.Uuid
+  issueId  String @db.Uuid
+  title    String?
+  url      String
+  metadata Json   @default("{}")
+
+  @@index([issueId])
+  @@map("issue_links")
+}
+
+model IssueActivity {
+  id        String   @id @default(uuid()) @db.Uuid
+  issueId   String?  @db.Uuid
+  actorId   String?  @db.Uuid
+  verb      String   @default("created")
+  field     String?
+  oldValue  String?
+  newValue  String?
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([issueId])
+  @@map("issue_activities")
+}
+
+model IssueSubscriber {
+  issueId      String @db.Uuid
+  subscriberId String @db.Uuid
+
+  @@id([issueId, subscriberId])
+  @@map("issue_subscribers")
+}
+
+model IssueReaction {
+  issueId  String @db.Uuid
+  actorId  String @db.Uuid
+  reaction String
+
+  @@id([issueId, actorId, reaction])
+  @@map("issue_reactions")
+}
+
+model CommentReaction {
+  commentId String @db.Uuid
+  actorId   String @db.Uuid
+  reaction  String
+
+  @@id([commentId, actorId, reaction])
+  @@map("comment_reactions")
+}
+
+model IssueVote {
+  issueId String @db.Uuid
+  actorId String @db.Uuid
+  vote    Int    @default(1)
+
+  @@id([issueId, actorId])
+  @@map("issue_votes")
+}
+
+model IssueVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  workspaceId String   @db.Uuid
+  issueId     String   @db.Uuid
+  name        String   @default("")
+  priority    Priority @default(none)
+  sequenceId  Int      @default(1)
+  sortOrder   Float    @default(65535)
+  completedAt DateTime?
+  lastSavedAt DateTime @default(now())
+
+  @@index([issueId])
+  @@map("issue_versions")
+}
+
+// ---------- B1: saved views ----------
+
+model IssueView {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @db.Uuid
+  projectId         String?   @db.Uuid
+  ownedById         String    @db.Uuid
+  name              String
+  description       String    @default("")
+  query             Json      @default("{}")
+  filters           Json      @default("{}")
+  displayFilters    Json      @default("{}")
+  displayProperties Json      @default("{}")
+  access            Int       @default(1)
+  sortOrder         Float     @default(65535)
+  isLocked          Boolean   @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  @@map("issue_views")
 }
