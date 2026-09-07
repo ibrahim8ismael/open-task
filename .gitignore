@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Builds
+dist/
+out/
+build/
+.react-router/
+.turbo/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Env (keep .env.example, ignore real env)
+.env
+.env.local
+.env.*.local
+apps/*/.env
+apps/*/.env.local
+
+# Uploads / data volumes
+uploads/
+pgdata/
+*.rdb
+
+# Logs / debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+logs/
+htmlcov/
+.coverage
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.pem
+.secrets
+history/
+
+# Misc
+coverage/
+storybook-static/
+output.css
+.vercel/
+tmp/
+temp/

@@ -1,0 +1,214 @@
+// B0 schema: identity + workspace + project + state (docs/02 §2.1-2.3).
+// B1 adds issues/cycles/modules/views/pages/intake/etc.
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum StateGroup {
+  backlog
+  unstarted
+  started
+  completed
+  cancelled
+  triage
+}
+
+enum Network {
+  Secret
+  Public
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  username     String    @unique
+  email        String?   @unique
+  displayName  String    @default("")
+  firstName    String    @default("")
+  lastName     String    @default("")
+  avatar       String    @default("")
+  passwordHash String    @default("")
+  isActive     Boolean   @default(true)
+  isSuperuser  Boolean   @default(false)
+  isBot        Boolean   @default(false)
+  userTimezone String    @default("UTC")
+  lastActive   DateTime?
+
+  profile  Profile?
+  accounts Account[]
+
+  @@map("users")
+}
+
+model Profile {
+  id              String  @id @default(uuid()) @db.Uuid
+  userId          String  @unique @db.Uuid
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language        String  @default("en")
+  theme           Json    @default("{}")
+  isOnboarded     Boolean @default(false)
+  lastWorkspaceId String? @db.Uuid
+  startOfWeek     Int     @default(0)
+
+  @@map("profiles")
+}
+
+model Account {
+  id                String @id @default(uuid()) @db.Uuid
+  userId            String @db.Uuid
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  accessToken       String
+  refreshToken      String?
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionKey String   @id
+  sessionData String
+  expireAt   DateTime
+  deviceInfo Json?
+  userId     String?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Workspace {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String    @unique
+  organizationSize String?
+  timezone        String    @default("UTC")
+  backgroundColor String    @default("#ffffff")
+  ownerId         String    @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  members  WorkspaceMember[]
+  projects Project[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberId    String   @db.Uuid
+  role        Role     @default(MEMBER)
+  isActive    Boolean  @default(true)
+  viewProps   Json     @default("{}")
+  issueProps  Json     @default("{\"subscribed\":true}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([workspaceId, memberId])
+  @@map("workspace_members")
+}
+
+model WorkspaceMemberInvite {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  email       String
+  accepted    Boolean   @default(false)
+  token       String
+  role        Role      @default(MEMBER)
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([email, workspaceId])
+  @@map("workspace_member_invites")
+}
+
+model Team {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  name        String
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([name, workspaceId])
+  @@map("teams")
+}
+
+model WorkspaceUserProperties {
+  id                String @id @default(uuid()) @db.Uuid
+  workspaceId       String @db.Uuid
+  userId            String @db.Uuid
+  filters           Json   @default("{}")
+  displayFilters    Json   @default("{}")
+  displayProperties Json   @default("{}")
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_user_properties")
+}
+
+model Project {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @db.Uuid
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name          String
+  identifier    String
+  description   String    @default("")
+  network       Network   @default(Public)
+  emoji         String?
+  archiveIn     Int       @default(0)
+  closeIn       Int       @default(0)
+  moduleView    Boolean   @default(false)
+  cycleView     Boolean   @default(false)
+  issueViewsView Boolean  @default(false)
+  pageView      Boolean   @default(true)
+  intakeView    Boolean   @default(false)
+  archivedAt    DateTime?
+  timezone      String    @default("UTC")
+  defaultStateId String?  @db.Uuid
+  defaultState   State?   @relation("ProjectDefaultState", fields: [defaultStateId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  states State[] @relation("ProjectStates")
+
+  @@unique([identifier, workspaceId])
+  @@unique([name, workspaceId])
+  @@map("projects")
+}
+
+model State {
+  id          String     @id @default(uuid()) @db.Uuid
+  projectId   String     @db.Uuid
+  project     Project    @relation("ProjectStates", fields: [projectId], references: [id], onDelete: Cascade)
+  workspaceId String     @db.Uuid
+  name        String
+  description String     @default("")
+  color       String     @default("#808080")
+  group       StateGroup @default(backlog)
+  sequence    Float      @default(65535)
+  isDefault   Boolean    @default(false)
+  isTriage    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  defaultFor Project[] @relation("ProjectDefaultState")
+
+  @@unique([name, projectId])
+  @@map("states")
+}
