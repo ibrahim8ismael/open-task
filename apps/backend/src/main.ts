@@ -1,6 +1,7 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
+import { urlencoded } from "express";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 
@@ -8,6 +9,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { cors: false });
   app.use(helmet());
   app.use(cookieParser());
+  // HTML form POSTs from apps/web auth screens (sign-in/sign-up/magic)
+  app.use(urlencoded({ extended: false }));
   app.enableCors({
     origin: (process.env.WEB_BASE_URL ?? "http://localhost:3000").split(","),
     credentials: true,

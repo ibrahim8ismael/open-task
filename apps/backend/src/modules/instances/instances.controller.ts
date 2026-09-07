@@ -1,5 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
+import { Public } from "../../common/decorators/auth.decorators";
 
+@Public()
 @Controller("api/instances")
 export class InstancesController {
   @Get()
