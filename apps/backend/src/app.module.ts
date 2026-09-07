@@ -7,6 +7,7 @@ import { SessionAuthGuard } from "./common/guards/session-auth.guard";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { AssetsModule } from "./modules/assets/assets.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { ExporterModule } from "./modules/exporter/exporter.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InstancesModule } from "./modules/instances/instances.module";
 import { IntakeModule } from "./modules/intake/intake.module";
@@ -28,6 +29,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
     HealthModule,
     InstancesModule,
     AuthModule,
+    ExporterModule,
     UsersModule,
     WorkspacesModule,
     ProjectsModule,

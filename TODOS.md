@@ -72,7 +72,8 @@
 ## Phase B4 — Files / export / webhooks / tokens / crons (2 days, ref `docs/03 §3.6-3.7`, `docs/04 §4.6`)
 
 - [x] B4.1 Files: `FileAsset` local upload + meta, `FILE_SIZE_LIMIT=5MB` (done in B1 assets module; orphan GC lands in B4.5) + ops models migration `b4-ops-models` (ExporterHistory/Webhook/WebhookLog/APIToken/APIActivityLog)
-- [ ] B4.2 Export: `ExporterHistory{workspace,projectIds[],provider csv|xlsx|json,token}`; `POST|GET /.../export-issues/` async build zip → 7d URL; expired GC
+- [x] B4.2 Export: `ExporterHistory{workspace,projectIds[],provider csv|xlsx|json,token}`; `POST /export-issues/` (synchronous build at internal scale, 7d token URL) + `GET` history + `GET /api/exports/:token/download/` (404/410 handling); `purgeExpired()` ready for the B4.5 cron
+  - Verified by curl: csv (ENG keys, states, labels), json (6 rows), xlsx (7KB), history (3), bad token 404
 - [ ] B4.3 Webhooks: `Webhook{url http/https no-localhost, secretKey plane_wh_*, isActive}` unique workspace/url; `CRUD + regenerate + logs`; HMAC POST + retry + `WebhookLog` + retention purge; secret hidden unless `?show_secret`
 - [ ] B4.4 Tokens: `APIToken{token plane_api_*, isActive, expiredAt}`; `GET|POST|DELETE /api/users/api-tokens/`; `X-Api-Token` guard + 60/min limit
 - [ ] B4.5 Crons (`@nestjs/schedule`, no BullMQ v1): `*/5 * * * *` notify fanout (Nodemailer TS stub + `EmailNotificationLog`), `0 0 * * *` hard-delete (`deletedAt` older than retention) + retention (api/email logs, page/issue versions, webhook logs), `0 1 * * *` archive_and_close (`archiveIn`/`closeIn` per `docs/03 §3.6`)

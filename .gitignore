@@ -18,8 +18,9 @@ tsconfig.tsbuildinfo
 apps/*/.env
 apps/*/.env.local
 
-# Uploads / data volumes
+# Uploads / data volumes / generated exports
 uploads/
+exports/
 pgdata/
 *.rdb
 
