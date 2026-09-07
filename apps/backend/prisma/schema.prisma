@@ -770,3 +770,185 @@ model ModuleUserProperties {
   @@unique([moduleId, userId])
   @@map("module_user_properties")
 }
+
+// ---------- B3: pages ----------
+
+model Page {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @db.Uuid
+  ownedById       String    @db.Uuid
+  parentId        String?   @db.Uuid
+  parent          Page?     @relation("PageTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children        Page[]    @relation("PageTree")
+  name            String    @default("")
+  descriptionJson Json      @default("{}")
+  descriptionHtml String    @default("<p></p>")
+  access          Int       @default(0)
+  color           String    @default("")
+  archivedAt      DateTime? @db.Date
+  isLocked        Boolean   @default(false)
+  sortOrder       Float     @default(65535)
+  createdBy       String?   @db.Uuid
+  updatedBy       String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@map("pages")
+}
+
+model PageVersion {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @db.Uuid
+  pageId            String   @db.Uuid
+  ownedById         String   @db.Uuid
+  descriptionJson   Json     @default("{}")
+  descriptionHtml   String   @default("")
+  lastSavedAt       DateTime @default(now())
+
+  @@index([pageId])
+  @@map("page_versions")
+}
+
+model ProjectPage {
+  projectId   String @db.Uuid
+  pageId      String @db.Uuid
+  workspaceId String @db.Uuid
+
+  @@id([projectId, pageId])
+  @@map("project_pages")
+}
+
+model PageLabel {
+  labelId     String @db.Uuid
+  pageId      String @db.Uuid
+  workspaceId String @db.Uuid
+
+  @@id([labelId, pageId])
+  @@map("page_labels")
+}
+
+// ---------- B3: intake ----------
+
+enum IntakeStatus {
+  Pending
+  Rejected
+  Snoozed
+  Accepted
+  Duplicate
+}
+
+model Intake {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  workspaceId String    @db.Uuid
+  name        String
+  description String    @default("")
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  issues IntakeIssue[]
+
+  @@unique([name, projectId])
+  @@map("intakes")
+}
+
+model IntakeIssue {
+  id             String       @id @default(uuid()) @db.Uuid
+  projectId      String       @db.Uuid
+  workspaceId    String       @db.Uuid
+  intakeId       String       @db.Uuid
+  intake         Intake       @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  issueId        String       @db.Uuid
+  status         IntakeStatus @default(Pending)
+  snoozedTill    DateTime?
+  source         String?      @default("IN_APP")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("intake_issues")
+}
+
+// ---------- B3: social ----------
+
+model Notification {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @db.Uuid
+  projectId        String?   @db.Uuid
+  receiverId       String    @db.Uuid
+  triggeredById    String?   @db.Uuid
+  entityName       String
+  entityIdentifier String?   @db.Uuid
+  title            String
+  data             Json?
+  readAt           DateTime?
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([receiverId, workspaceId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model Sticky {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  ownerId     String   @db.Uuid
+  name        String?
+  description Json     @default("{}")
+  color       String?
+  sortOrder   Float    @default(65535)
+  createdAt   DateTime @default(now())
+
+  @@map("stickies")
+}
+
+model DraftIssue {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @db.Uuid
+  projectId       String?  @db.Uuid
+  parentId        String?  @db.Uuid
+  stateId         String?  @db.Uuid
+  name            String?
+  descriptionJson Json     @default("{}")
+  priority        Priority @default(none)
+  sortOrder       Float    @default(65535)
+  createdBy       String?  @db.Uuid
+  updatedBy       String?  @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  @@map("draft_issues")
+}
+
+model DraftIssueAssignee {
+  draftIssueId String @db.Uuid
+  assigneeId   String @db.Uuid
+
+  @@id([draftIssueId, assigneeId])
+  @@map("draft_issue_assignees")
+}
+
+model DraftIssueLabel {
+  draftIssueId String @db.Uuid
+  labelId      String @db.Uuid
+
+  @@id([draftIssueId, labelId])
+  @@map("draft_issue_labels")
+}
+
+model RecentVisit {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @db.Uuid
+  userId           String   @db.Uuid
+  entityType       String
+  entityIdentifier String?  @db.Uuid
+  entityName       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([workspaceId, userId])
+  @@map("recent_visits")
+}

@@ -59,6 +59,7 @@
 
 ## Phase B3 — Pages / intake / social (2–3 days, ref `docs/02 §2.6`, `docs/04 §4.6`)
 
+- [x] B3.0 Models + migration `b3-pages-intake-social`: Page(+tree)/PageVersion/ProjectPage/PageLabel; Intake(+IntakeIssue triage statuses); Notification/Sticky/DraftIssue(+Assignee/Label)/RecentVisit (intake-name partial unique deferred to B5)
 - [ ] B3.1 Pages: Page(+Tree, access, lock, sort) + PageVersion (cap 20/page, GC) + ProjectPage; TipTap JSON passthrough; `share` token stub; versions/lock/share endpoints
 - [ ] B3.2 Intake: Intake (unique name/project) + IntakeIssue (status Pending/Rejected/Snoozed/Accepted/Duplicate, source IN_APP); endpoints + `:id/accept` (create Issue) `|reject|snooze`
 - [ ] B3.3 Social: Notification (index receiver/workspace/read/created) + read/archive, UserFavorite, Sticky, DraftIssue, RecentVisit, `GET /api/users/last-visited-workspace/`
