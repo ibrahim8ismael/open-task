@@ -92,6 +92,13 @@
 - [x] B5.5 Docs: TODOS ticked; docs/04 base URL updated to :4040 + shipped-endpoints note; README runbook added; `PLAN.md` not re-created (TODOS.md + AGENT.md are the live plan)
 - [x] Exit: internal URL (:4040 backend / :3000 web) + onboarding runbook
 
+## Phase 6 — Optional hardening (carried out of B5)
+
+- [x] 6.1 API-token rate limit: `parseRateLimit("60/minute")` util; SessionAuthGuard token path returns 429 `{detail}` after limit; `API_KEY_RATE_LIMIT` env in .env.example
+  - Verified by curl: 70 rapid calls → exactly 60×200 + 10×429
+- [ ] 6.2 SMTP delivery (Nodemailer, SMTP_* gated): magic codes, password reset links, workspace/project invitations, notification digest cron (marks `data.emailDigestSent`); dev fallback stays (code/token in response when AUTH_RETURN_CODES_DEV)
+- [ ] 6.3 Web UI click-through: script every API call the web makes on app boot + key pages (sign-in, workspace home, project issues/board/cycles/modules/pages/intake) against :4040; fix any 4xx/5xx; human visual pass recommended afterwards
+
 ## Out of scope (do not build, do not tick)
 
 AI agent, AI APIs, LLM/summaries/embeddings/vectors, OpenSearch, RabbitMQ/Celery/Beat, BullMQ/Redis-required queues, MinIO cluster, SSO/SAML, `apps/live` Hocuspocus collab, license/monitor/silo server, `apps/admin|space` promote (parked).

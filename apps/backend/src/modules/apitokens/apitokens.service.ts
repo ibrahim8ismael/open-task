@@ -7,7 +7,7 @@ export class ApiTokensService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Verify an X-Api-Token value; updates lastUsed + writes an activity row. */
-  async verify(token: string, meta?: { path?: string; method?: string; ip?: string }): Promise<{ userId: string } | null> {
+  async verify(token: string, meta?: { path?: string; method?: string; ip?: string }): Promise<{ userId: string; tokenId: string } | null> {
     if (!token.startsWith("plane_api_")) return null;
     const row = await this.prisma.aPIToken.findUnique({ where: { token } });
     if (!row || !row.isActive) return null;
@@ -24,7 +24,7 @@ export class ApiTokensService {
         },
       })
       .catch(() => undefined);
-    return { userId: row.userId };
+    return { userId: row.userId, tokenId: row.id };
   }
 
   async list(userId: string): Promise<Record<string, unknown>[]> {

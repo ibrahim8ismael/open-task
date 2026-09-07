@@ -1,8 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, HttpException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { IS_PUBLIC_KEY } from "../decorators/auth.decorators";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApiTokensService } from "../../modules/apitokens/apitokens.service";
+import { parseRateLimit, throttleCheck } from "../utils/throttle";
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -28,6 +29,11 @@ export class SessionAuthGuard implements CanActivate {
         method: req.method,
       });
       if (res) {
+        // Rate limit per token, default 60/min (docs/04; API_KEY_RATE_LIMIT)
+        const [limit, windowMs] = parseRateLimit(process.env.API_KEY_RATE_LIMIT ?? "60/minute");
+        if (!throttleCheck(`api-token:${res.tokenId}`, limit, windowMs)) {
+          throw new HttpException({ detail: "API key rate limit exceeded." }, 429);
+        }
         const tokenUser = await this.prisma.user.findUnique({ where: { id: res.userId } });
         if (tokenUser?.isActive) {
           req.user = { id: tokenUser.id, email: tokenUser.email, sessionKey: "" };
