@@ -11,6 +11,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { InstancesModule } from "./modules/instances/instances.module";
 import { IssuesModule } from "./modules/issues/issues.module";
 import { TaxonomyModule } from "./modules/taxonomy/taxonomy.module";
+import { TrackingModule } from "./modules/tracking/tracking.module";
 import { ViewsModule } from "./modules/views/views.module";
 import { ProjectsModule } from "./modules/projects/projects.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -29,6 +30,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
     ProjectsModule,
     IssuesModule,
     TaxonomyModule,
+    TrackingModule,
     ViewsModule,
     AssetsModule,
   ],

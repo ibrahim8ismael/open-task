@@ -672,11 +672,12 @@ model Cycle {
 }
 
 model CycleIssue {
+  id      String @id @default(uuid()) @db.Uuid
   cycleId String @db.Uuid
   cycle   Cycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   issueId String @db.Uuid
 
-  @@id([cycleId, issueId])
+  @@unique([cycleId, issueId])
   @@map("cycle_issues")
 }
 
@@ -698,7 +699,7 @@ model CycleUserProperties {
 enum ModuleStatus {
   backlog
   planned
-  in_progress
+  in_progress @map("in-progress")
   paused
   completed
   cancelled

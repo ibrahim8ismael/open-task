@@ -323,20 +323,22 @@ export class ProjectsService {
     });
     return Promise.all(
       rows.map(async (p) => {
-        const [total, completed, members] = await Promise.all([
+        const [total, completed, members, cycles, modules] = await Promise.all([
           this.prisma.issue.count({ where: { projectId: p.id, deletedAt: null, archivedAt: null } }),
           this.prisma.issue.count({
             where: { projectId: p.id, deletedAt: null, archivedAt: null, state: { is: { group: "completed" } } },
           }),
           this.prisma.projectMember.count({ where: { projectId: p.id, isActive: true, deletedAt: null } }),
+          this.prisma.cycle.count({ where: { projectId: p.id, deletedAt: null, archivedAt: null } }),
+          this.prisma.module.count({ where: { projectId: p.id, deletedAt: null, archivedAt: null } }),
         ]);
         return {
           id: p.id,
           total_issues: total,
           completed_issues: completed,
-          total_cycles: 0, // TODO B2
+          total_cycles: cycles,
           total_members: members,
-          total_modules: 0, // TODO B2
+          total_modules: modules,
         };
       }),
     );

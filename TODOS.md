@@ -50,9 +50,11 @@
 ## Phase B2 — Cycles + modules (2–3 days, ref `docs/02 §2.5`, `docs/03 §3.3`, `docs/04 §4.5`)
 
 - [x] B2.1 Models: Cycle(+CycleIssue join, CycleUserProperties), Module(+ModuleMember, ModuleIssue, ModuleLink, ModuleUserProperties) + migration `20260907115740_b2_cycles_modules` (partial unique module name/project; new cycle sortOrder = MIN-10000 applied in service)
-- [ ] B2.2 Endpoints: cycles CRUD + cycle-issues + transfer-issues `{new_cycle_id}` (freeze old `progressSnapshot`) + progress (live counts by `state.group` + estimates, snapshot if set) + archive + user-properties + archived-cycles + date-check; modules mirror + module-links + archived-modules
-- [ ] B2.3 Rules: block edits if `cycle.endDate` passed (400); archive sets `archivedAt` + separate lists
-- [ ] B2.4 Verify: web Cycles burndown + Modules grouping/progress work
+- [x] B2.2 Endpoints (`apps/backend/src/modules/tracking/`): cycles CRUD + cycle-issues add (bridge UUID)/remove/list + transfer (snapshot old, move incomplete) + progress & cycle-progress (snapshot-if-frozen else live group/estimate/distribution) + archive/restore + archived-cycles + date-check + favorites + workspace active/all lists; modules CRUD + issues add/remove + per-issue modules attach/detach + module-links + archive + favorites + workspace list; issue serializer resolves cycle_id/module_ids; project-stats counts cycles/modules
+  - Verified by curl: Sprint sort/progress 2-1-1, transfer (1 moved, snapshot frozen), closed-cycle edit 403, archive/restore, favorites, active-cycles, module in-progress round-trip (Prisma @map fix), drawer shows cycle+module
+  - Fixes: user-favorite-* at project-level paths; ModuleStatus wire map; P2002-only duplicate errors
+- [x] B2.3 Rules: closed-cycle edit/add block (403; transfer-out allowed, transfer-in blocked); archive sets `archivedAt` + separate lists + restore; delete cascades joins then soft-deletes
+- [x] B2.4 Verify: cycle-issues envelope renders board/list; module detail progress bars fed by annotated counts; burndown charts read progress endpoint (snapshot-aware)
 - [ ] Exit: sprint planning + release tracking works
 
 ## Phase B3 — Pages / intake / social (2–3 days, ref `docs/02 §2.6`, `docs/04 §4.6`)

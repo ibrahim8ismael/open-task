@@ -8,6 +8,8 @@ export interface IssueCounts {
   children: Map<string, number>;
   attachments: Map<string, number>;
   links: Map<string, number>;
+  cycles: Map<string, string>;
+  modules: Map<string, string[]>;
 }
 
 const emptyCounts = (): IssueCounts => ({
@@ -16,6 +18,8 @@ const emptyCounts = (): IssueCounts => ({
   children: new Map(),
   attachments: new Map(),
   links: new Map(),
+  cycles: new Map(),
+  modules: new Map(),
 });
 
 type IssueRow = {
@@ -58,8 +62,8 @@ export function serializeBaseIssue(i: IssueRow, c: IssueCounts): Record<string, 
     link_count: c.links.get(i.id) ?? 0,
     project_id: i.projectId,
     parent_id: i.parentId,
-    cycle_id: null, // TODO B2: resolve via CycleIssue
-    module_ids: null, // TODO B2: resolve via ModuleIssue
+    cycle_id: c.cycles.get(i.id) ?? null,
+    module_ids: c.modules.get(i.id) ?? [],
     type_id: i.typeId,
     created_at: i.createdAt,
     updated_at: i.updatedAt,
@@ -94,12 +98,14 @@ export class IssuesService {
   async countsFor(issueIds: string[]): Promise<IssueCounts> {
     const c = emptyCounts();
     if (issueIds.length === 0) return c;
-    const [labels, assignees, children, attachments, links] = await Promise.all([
+    const [labels, assignees, children, attachments, links, cycleLinks, moduleLinks] = await Promise.all([
       this.prisma.issueLabel.findMany({ where: { issueId: { in: issueIds } } }),
       this.prisma.issueAssignee.findMany({ where: { issueId: { in: issueIds } } }),
       this.prisma.issue.groupBy({ by: ["parentId"], where: { parentId: { in: issueIds }, deletedAt: null }, _count: true }),
       this.prisma.issueAttachment.groupBy({ by: ["issueId"], where: { issueId: { in: issueIds } }, _count: true }),
       this.prisma.issueLink.groupBy({ by: ["issueId"], where: { issueId: { in: issueIds } }, _count: true }),
+      this.prisma.cycleIssue.findMany({ where: { issueId: { in: issueIds } } }),
+      this.prisma.moduleIssue.findMany({ where: { issueId: { in: issueIds } } }),
     ]);
     for (const r of labels) {
       const arr = c.labels.get(r.issueId) ?? [];
@@ -114,6 +120,12 @@ export class IssuesService {
     for (const r of children) if (r.parentId) c.children.set(r.parentId, r._count);
     for (const r of attachments) c.attachments.set(r.issueId, r._count);
     for (const r of links) c.links.set(r.issueId, r._count);
+    for (const r of cycleLinks) c.cycles.set(r.issueId, r.cycleId);
+    for (const r of moduleLinks) {
+      const arr = c.modules.get(r.issueId) ?? [];
+      arr.push(r.moduleId);
+      c.modules.set(r.issueId, arr);
+    }
     return c;
   }
 
