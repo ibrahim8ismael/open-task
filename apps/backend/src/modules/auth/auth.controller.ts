@@ -35,6 +35,12 @@ interface FormBody {
   csrfmiddlewaretoken?: string;
 }
 
+interface IEmailCheckResponseShape {
+  existing: boolean;
+  status: "MAGIC_CODE" | "CREDENTIAL";
+  is_password_autoset: boolean;
+}
+
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -69,11 +75,20 @@ export class AuthController {
   @Public()
   @Post("email-check")
   @HttpCode(200)
-  async emailCheck(@Body() dto: EmailCheckDto): Promise<{ exists: boolean }> {
+  async emailCheck(@Body() dto: EmailCheckDto): Promise<IEmailCheckResponseShape> {
     const email = this.auth.normalizeEmail(dto.email);
-    if (!this.auth.validEmail(email)) return { exists: false };
+    const smtpConfigured = Boolean(process.env.EMAIL_HOST);
+    const magicEnabled = (process.env.ENABLE_MAGIC_LINK_LOGIN ?? "1") === "1";
+    const magicStatus: "MAGIC_CODE" | "CREDENTIAL" = smtpConfigured && magicEnabled ? "MAGIC_CODE" : "CREDENTIAL";
+    if (!this.auth.validEmail(email)) return { existing: false, status: magicStatus, is_password_autoset: true };
     const user = await this.prisma.user.findUnique({ where: { email } });
-    return { exists: !!user };
+    if (!user) return { existing: false, status: magicStatus, is_password_autoset: true };
+    const isPasswordAutoset = !user.passwordHash;
+    return {
+      existing: true,
+      status: isPasswordAutoset ? magicStatus : "CREDENTIAL",
+      is_password_autoset: isPasswordAutoset,
+    };
   }
 
   // --- email sign-in / sign-up (public, HTML form POST -> 302) ---
