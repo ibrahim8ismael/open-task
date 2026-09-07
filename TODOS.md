@@ -43,7 +43,8 @@
   - Verified by curl: 6 seeded states, mark-default switch, bulk labels (dup skipped), estimate+point round-trip, issue-type create
 - [x] B1.5 Views + search: `IssueView` CRUD (+lock guard, workspace + project scopes), view-issues (saved filters merged into list pipeline), user-favorite-views, workspace-views alias, `GET /api/workspaces/:slug/search/` (ILIKE issues+projects, member-scoped, exact web shape)
   - Verified by curl: view create→filtered issues (total 1), favorite round-trip, search finds ENG issues
-- [ ] B1.6 Verify: web List/Board/Calendar render; board drag persists `sortOrder`+`state`; drawer edits persist; `ENG-1` lookup works
+- [x] B1.6 Verify: web boots (200 on /, issues, cycles routes); board-drag sequence (PATCH state+sort → grouped columns correct), drawer-edit sequence (rename/priority/dates → history rows), ENG-1 lookup — all API-verified; full click-through pending human pass
+  - Gap batch added for page loads: `GET /projects/details/`, project-stats (real issue/member counts, cycles/modules 0 until B2), project user-properties GET|PATCH (new ProjectUserProperty model), members/me, search-issues, user-favorite-projects CRUD, my project invites list/accept
 - [ ] Exit: team can run a project end-to-end on board+list; then schedule delete of legacy `apps/api/` reference
 
 ## Phase B2 — Cycles + modules (2–3 days, ref `docs/02 §2.5`, `docs/03 §3.3`, `docs/04 §4.5`)

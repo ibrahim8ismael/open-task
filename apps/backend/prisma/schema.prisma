@@ -284,6 +284,7 @@ model ProjectMemberInvite {
   accepted  Boolean @default(false)
   token     String
   role      Role    @default(MEMBER)
+  respondedAt DateTime?
 
   @@map("project_member_invites")
 }
@@ -625,4 +626,20 @@ model FileAsset {
 
   @@index([entityType, entityIdentifier])
   @@map("file_assets")
+}
+
+model ProjectUserProperty {
+  id                String   @id @default(uuid()) @db.Uuid
+  projectId         String   @db.Uuid
+  workspaceId       String   @db.Uuid
+  userId            String   @db.Uuid
+  filters           Json     @default("{}")
+  displayFilters    Json     @default("{}")
+  displayProperties Json     @default("{}")
+  richFilters       Json     @default("{}")
+  preferences       Json     @default("{}")
+  sortOrder         Float    @default(65535)
+
+  @@unique([userId, projectId])
+  @@map("project_user_properties")
 }

@@ -24,6 +24,13 @@ export class ProjectsController {
     return this.projects.create(slug, user.id, dto);
   }
 
+  // NOTE: literal "details" must register before ":id" or Express matches it as an id.
+  @Get("details")
+  @Roles("GUEST")
+  detailsList(@Param("slug") slug: string): Promise<Record<string, unknown>[]> {
+    return this.projects.detailsList(slug);
+  }
+
   @Get(":id/details")
   @Roles("GUEST")
   details(@Param("slug") slug: string, @Param("id") id: string): Promise<Record<string, unknown>> {
@@ -75,6 +82,17 @@ export class ProjectsController {
   }
 
   // --- members ---
+
+  // NOTE: "me" must register before ":memberId".
+  @Get(":id/members/me")
+  @Roles("GUEST")
+  myMembership(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>> {
+    return this.projects.myMembership(slug, id, user.id);
+  }
 
   @Get(":id/members")
   @Roles("GUEST")
@@ -130,6 +148,41 @@ export class ProjectsController {
   ): Promise<Record<string, unknown>> {
     return this.projects.invite(slug, id, dto.email, dto.role);
   }
+
+  // --- user properties ---
+
+  @Get(":id/user-properties")
+  @Roles("GUEST")
+  userProperties(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>> {
+    return this.projects.userProperties(slug, id, user.id);
+  }
+
+  @Patch(":id/user-properties")
+  @Roles("GUEST")
+  updateUserProperties(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
+    @Body() dto: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    return this.projects.updateUserProperties(slug, id, user.id, dto);
+  }
+
+  // --- project issue search ---
+
+  @Get(":id/search-issues")
+  @Roles("GUEST")
+  searchIssues(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @Query("search") search: string,
+  ): Promise<Record<string, unknown>[]> {
+    return this.projects.searchIssues(slug, id, search ?? "");
+  }
 }
 
 @Controller()
@@ -141,5 +194,65 @@ export class ProjectMiscController {
   @Level("WORKSPACE")
   identifiers(@Param("slug") slug: string): Promise<Record<string, unknown>[]> {
     return this.projects.identifiers(slug);
+  }
+
+  @Get("api/workspaces/:slug/project-stats")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  stats(@Param("slug") slug: string): Promise<Record<string, unknown>[]> {
+    return this.projects.stats(slug);
+  }
+
+  @Get("api/workspaces/:slug/user-favorite-projects")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  favoriteProjects(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>[]> {
+    return this.projects.favoriteProjects(slug, user.id);
+  }
+
+  @Post("api/workspaces/:slug/user-favorite-projects")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  favoriteProject(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Body() dto: { project: string },
+  ): Promise<Record<string, unknown>> {
+    return this.projects.favoriteProject(slug, user.id, dto.project);
+  }
+
+  @Delete("api/workspaces/:slug/user-favorite-projects/:projectId")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  unfavoriteProject(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Param("projectId") projectId: string,
+  ): Promise<{ detail: string }> {
+    return this.projects.unfavoriteProject(slug, user.id, projectId);
+  }
+
+  @Get("api/users/me/workspaces/:slug/projects/invitations")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  myInvites(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>[]> {
+    return this.projects.myProjectInvites(slug, user.id);
+  }
+
+  @Post("api/users/me/workspaces/:slug/projects/invitations")
+  @Roles("GUEST")
+  @Level("WORKSPACE")
+  acceptInvites(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Body() dto: { project_ids: string[] },
+  ): Promise<{ detail: string }> {
+    return this.projects.acceptProjectInvites(slug, user.id, dto.project_ids ?? []);
   }
 }

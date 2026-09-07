@@ -298,4 +298,223 @@ export class ProjectsService {
     });
     return rows.map((r) => ({ id: r.id, name: r.identifier, project: r.id }));
   }
+
+  async detailsList(workspaceSlug: string): Promise<Record<string, unknown>[]> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const rows = await this.prisma.project.findMany({
+      where: { workspaceId: ws.id, deletedAt: null },
+      orderBy: { createdAt: "asc" },
+    });
+    const withCounts = await Promise.all(
+      rows.map(async (p) => {
+        const totalMembers = await this.prisma.projectMember.count({
+          where: { projectId: p.id, isActive: true, deletedAt: null },
+        });
+        return Object.assign(serializeProject(p), { total_members: totalMembers });
+      }),
+    );
+    return withCounts;
+  }
+
+  async stats(workspaceSlug: string): Promise<Record<string, unknown>[]> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const rows = await this.prisma.project.findMany({
+      where: { workspaceId: ws.id, deletedAt: null, archivedAt: null },
+    });
+    return Promise.all(
+      rows.map(async (p) => {
+        const [total, completed, members] = await Promise.all([
+          this.prisma.issue.count({ where: { projectId: p.id, deletedAt: null, archivedAt: null } }),
+          this.prisma.issue.count({
+            where: { projectId: p.id, deletedAt: null, archivedAt: null, state: { is: { group: "completed" } } },
+          }),
+          this.prisma.projectMember.count({ where: { projectId: p.id, isActive: true, deletedAt: null } }),
+        ]);
+        return {
+          id: p.id,
+          total_issues: total,
+          completed_issues: completed,
+          total_cycles: 0, // TODO B2
+          total_members: members,
+          total_modules: 0, // TODO B2
+        };
+      }),
+    );
+  }
+
+  async myMembership(workspaceSlug: string, projectId: string, userId: string): Promise<Record<string, unknown>> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    await this.projectOrThrow(ws.id, projectId);
+    const row = await this.prisma.projectMember.findFirst({
+      where: { projectId, memberId: userId, isActive: true, deletedAt: null },
+    });
+    if (!row) throw new NotFoundException({ detail: "Membership not found." });
+    return { id: row.id, project: row.projectId, member: row.memberId, role: roleToNum(row.role) };
+  }
+
+  async userProperties(workspaceSlug: string, projectId: string, userId: string): Promise<Record<string, unknown>> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    await this.projectOrThrow(ws.id, projectId);
+    const row = await this.prisma.projectUserProperty.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      create: { userId, projectId, workspaceId: ws.id },
+      update: {},
+    });
+    return serializeProjectProps(row);
+  }
+
+  async updateUserProperties(
+    workspaceSlug: string,
+    projectId: string,
+    userId: string,
+    dto: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    await this.projectOrThrow(ws.id, projectId);
+    const data: Record<string, unknown> = {};
+    if (dto.filters !== undefined) data.filters = dto.filters as object;
+    if (dto.display_filters !== undefined) data.displayFilters = dto.display_filters as object;
+    if (dto.display_properties !== undefined) data.displayProperties = dto.display_properties as object;
+    if (dto.rich_filters !== undefined) data.richFilters = dto.rich_filters as object;
+    if (dto.preferences !== undefined) data.preferences = dto.preferences as object;
+    if (dto.sort_order !== undefined) data.sortOrder = Number(dto.sort_order);
+    const row = await this.prisma.projectUserProperty.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      create: {
+        userId,
+        projectId,
+        workspaceId: ws.id,
+        filters: (data.filters as object | undefined) ?? {},
+        displayFilters: (data.displayFilters as object | undefined) ?? {},
+        displayProperties: (data.displayProperties as object | undefined) ?? {},
+        richFilters: (data.richFilters as object | undefined) ?? {},
+        preferences: (data.preferences as object | undefined) ?? {},
+        sortOrder: (data.sortOrder as number | undefined) ?? 65535,
+      },
+      update: data as never,
+    });
+    return serializeProjectProps(row);
+  }
+
+  async favoriteProjects(workspaceSlug: string, userId: string): Promise<Record<string, unknown>[]> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const rows = await this.prisma.userFavorite.findMany({
+      where: { workspaceId: ws.id, userId, entityType: "project" },
+    });
+    return rows.map((r) => ({ id: r.id, entity_type: r.entityType, entity_identifier: r.entityIdentifier }));
+  }
+
+  async favoriteProject(workspaceSlug: string, userId: string, projectId: string): Promise<Record<string, unknown>> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    await this.projectOrThrow(ws.id, projectId);
+    const row = await this.prisma.userFavorite.upsert({
+      where: { entityType_entityIdentifier_userId: { entityType: "project", entityIdentifier: projectId, userId } },
+      create: { workspaceId: ws.id, userId, entityType: "project", entityIdentifier: projectId },
+      update: {},
+    });
+    return { id: row.id, entity_type: row.entityType, entity_identifier: row.entityIdentifier };
+  }
+
+  async unfavoriteProject(workspaceSlug: string, userId: string, projectId: string): Promise<{ detail: string }> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    await this.prisma.userFavorite.deleteMany({
+      where: { workspaceId: ws.id, userId, entityType: "project", entityIdentifier: projectId },
+    });
+    return { detail: "Removed from favorites." };
+  }
+
+  async searchIssues(
+    workspaceSlug: string,
+    projectId: string,
+    search: string,
+  ): Promise<Record<string, unknown>[]> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const project = await this.projectOrThrow(ws.id, projectId);
+    const full = await this.prisma.project.findUniqueOrThrow({ where: { id: project.id } });
+    const term = (search ?? "").trim();
+    if (!term) return [];
+    const rows = await this.prisma.issue.findMany({
+      where: { projectId: project.id, deletedAt: null, name: { contains: term, mode: "insensitive" } },
+      take: 20,
+    });
+    const states = await this.prisma.state.findMany({ where: { projectId: project.id } });
+    const byId = new Map(states.map((s) => [s.id, s]));
+    return rows.map((r) => {
+      const st = r.stateId ? byId.get(r.stateId) : undefined;
+      return {
+        id: r.id,
+        name: r.name,
+        project_id: r.projectId,
+        project__identifier: full.identifier,
+        project__name: full.name,
+        sequence_id: r.sequenceId,
+        start_date: r.startDate,
+        state__color: st?.color ?? "",
+        state__group: st?.group ?? "",
+        state__name: st?.name ?? "",
+        workspace__slug: workspaceSlug,
+        type_id: r.typeId,
+      };
+    });
+  }
+
+  async myProjectInvites(workspaceSlug: string, userId: string): Promise<Record<string, unknown>[]> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (!user.email) return [];
+    const rows = await this.prisma.projectMemberInvite.findMany({
+      where: { workspaceId: ws.id, email: user.email.toLowerCase(), accepted: false },
+    });
+    return rows.map((r) => ({ id: r.id, email: r.email, project: r.projectId, role: roleToNum(r.role) }));
+  }
+
+  async acceptProjectInvites(workspaceSlug: string, userId: string, projectIds: string[]): Promise<{ detail: string }> {
+    const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (!user.email) return { detail: "No invitations." };
+    const invites = await this.prisma.projectMemberInvite.findMany({
+      where: { workspaceId: ws.id, email: user.email.toLowerCase(), accepted: false, projectId: { in: projectIds } },
+    });
+    await Promise.all(
+      invites.map(async (inv) => {
+        await this.prisma.projectMemberInvite.update({ where: { id: inv.id }, data: { accepted: true, respondedAt: new Date() } });
+        const existing = await this.prisma.projectMember.findFirst({
+          where: { projectId: inv.projectId, memberId: userId },
+        });
+        if (existing) {
+          await this.prisma.projectMember.update({
+            where: { id: existing.id },
+            data: { isActive: true, deletedAt: null, role: inv.role },
+          });
+        } else {
+          await this.prisma.projectMember.create({
+            data: { projectId: inv.projectId, workspaceId: ws.id, memberId: userId, role: inv.role },
+          });
+        }
+      }),
+    );
+    return { detail: `${invites.length} invitations accepted.` };
+  }
+}
+
+function serializeProjectProps(row: {
+  filters: unknown;
+  displayFilters: unknown;
+  displayProperties: unknown;
+  richFilters: unknown;
+  preferences: unknown;
+  sortOrder: number;
+}): Record<string, unknown> {
+  const prefs = (row.preferences as Record<string, unknown>) ?? {};
+  return {
+    filters: row.filters,
+    display_filters: row.displayFilters,
+    display_properties: row.displayProperties,
+    rich_filters: row.richFilters,
+    sort_order: row.sortOrder,
+    preferences: {
+      pages: { block_display: false, ...(prefs.pages as object | undefined) },
+      navigation: (prefs.navigation as object | undefined) ?? {},
+    },
+  };
 }
