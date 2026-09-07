@@ -830,13 +830,8 @@ model PageLabel {
 
 // ---------- B3: intake ----------
 
-enum IntakeStatus {
-  Pending
-  Rejected
-  Snoozed
-  Accepted
-  Duplicate
-}
+// Intake triage status is stored as Int matching web EInboxIssueStatus
+// (-2 pending, -1 declined, 0 snoozed, 1 accepted, 2 duplicate).
 
 model Intake {
   id          String    @id @default(uuid()) @db.Uuid
@@ -856,17 +851,19 @@ model Intake {
 }
 
 model IntakeIssue {
-  id             String       @id @default(uuid()) @db.Uuid
-  projectId      String       @db.Uuid
-  workspaceId    String       @db.Uuid
-  intakeId       String       @db.Uuid
-  intake         Intake       @relation(fields: [intakeId], references: [id], onDelete: Cascade)
-  issueId        String       @db.Uuid
-  status         IntakeStatus @default(Pending)
+  id             String    @id @default(uuid()) @db.Uuid
+  projectId      String    @db.Uuid
+  workspaceId    String    @db.Uuid
+  intakeId       String    @db.Uuid
+  intake         Intake    @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  issueId        String    @db.Uuid
+  // Wire status is numeric (web EInboxIssueStatus): -2 pending, -1 declined, 0 snoozed, 1 accepted, 2 duplicate
+  status         Int       @default(-2)
   snoozedTill    DateTime?
-  source         String?      @default("IN_APP")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  duplicateToId  String?   @db.Uuid
+  source         String?   @default("IN_APP")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@map("intake_issues")
 }
@@ -946,9 +943,10 @@ model RecentVisit {
   entityType       String
   entityIdentifier String?  @db.Uuid
   entityName       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([workspaceId, userId, entityType, entityIdentifier])
   @@index([workspaceId, userId])
   @@map("recent_visits")
 }

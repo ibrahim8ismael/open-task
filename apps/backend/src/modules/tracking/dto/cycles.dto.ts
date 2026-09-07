@@ -9,11 +9,9 @@ export class CreateCycleDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
   start_date?: string;
 
   @IsOptional()
-  @IsString()
   end_date?: string;
 
   @IsOptional()

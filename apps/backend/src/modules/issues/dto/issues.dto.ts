@@ -19,19 +19,15 @@ export class CreateIssueDto {
   priority?: string;
 
   @IsOptional()
-  @IsString()
   state_id?: string;
 
   @IsOptional()
-  @IsString()
   type_id?: string;
 
   @IsOptional()
-  @IsString()
   estimate_point?: string;
 
   @IsOptional()
-  @IsString()
   parent_id?: string;
 
   @IsOptional()
@@ -43,11 +39,9 @@ export class CreateIssueDto {
   label_ids?: string[];
 
   @IsOptional()
-  @IsString()
   start_date?: string;
 
   @IsOptional()
-  @IsString()
   target_date?: string;
 
   @IsOptional()

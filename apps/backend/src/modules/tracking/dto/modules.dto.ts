@@ -11,11 +11,9 @@ export class CreateModuleDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
   start_date?: string;
 
   @IsOptional()
-  @IsString()
   target_date?: string;
 
   @IsOptional()
@@ -23,7 +21,6 @@ export class CreateModuleDto {
   status?: string;
 
   @IsOptional()
-  @IsString()
   lead?: string;
 
   @IsOptional()

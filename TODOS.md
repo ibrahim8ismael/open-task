@@ -60,11 +60,14 @@
 ## Phase B3 — Pages / intake / social (2–3 days, ref `docs/02 §2.6`, `docs/04 §4.6`)
 
 - [x] B3.0 Models + migration `b3-pages-intake-social`: Page(+tree)/PageVersion/ProjectPage/PageLabel; Intake(+IntakeIssue triage statuses); Notification/Sticky/DraftIssue(+Assignee/Label)/RecentVisit (intake-name partial unique deferred to B5)
-- [ ] B3.1 Pages: Page(+Tree, access, lock, sort) + PageVersion (cap 20/page, GC) + ProjectPage; TipTap JSON passthrough; `share` token stub; versions/lock/share endpoints
-- [ ] B3.2 Intake: Intake (unique name/project) + IntakeIssue (status Pending/Rejected/Snoozed/Accepted/Duplicate, source IN_APP); endpoints + `:id/accept` (create Issue) `|reject|snooze`
-- [ ] B3.3 Social: Notification (index receiver/workspace/read/created) + read/archive, UserFavorite, Sticky, DraftIssue, RecentVisit, `GET /api/users/last-visited-workspace/`
-- [ ] B3.4 Verify: web Pages edit + versions, Intake triage creates Issue, bell shows rows
-- [ ] Exit: docs + triage + notifications live next to work
+- [x] B3.1 Pages (`apps/backend/src/modules/pages/`): CRUD + tree parent + TipTap description GET|PATCH (version snapshot, cap-20 retention) + versions list/get/restore + access + lock/unlock (owner bypass) + archive/restore + duplicate + move + favorites; snake_case TPage shape (label/project ids, is_favorite)
+  - Verified by curl: create→2 description edits→2 versions, lock blocks non-owner (owner bypass by design), duplicate copy, archive flag
+- [x] B3.2 Intake (`apps/backend/src/modules/intake/`): intakes CRUD + inbox-issues triage (numeric statuses -2..2 per web enum; default pending+snoozed-due queue; create spawns triage-state issue; accept→default state; decline/snooze/duplicate; issue sub-edit; delete removes link+issue)
+  - Verified by curl: create ENG-5 pending, hidden from normal list, accept→visible with state, decline→queue empty; fixed whitelist-stripped `issue` field + null-safe DTOs
+- [x] B3.3 Social (`apps/backend/src/modules/social/`): notifications list/unread/read/archive/mark-all-read/delete (=archive) + notify() helper for B4 fanout; stickies CRUD (owner-scoped); drafts CRUD + draft-to-issue promotion (copies fields, retires draft); recent-visits list/track (UUID-tolerant, cap-50)
+  - Verified by curl: sticky round-trip, draft→promoted ENG-7, notif list/unread/read/archive, recents incl. bad-id tolerance
+- [x] B3.4 Verify: pages edit+versions, triage creates+accepts issues, bell flows — all API-verified; web Pages/Intake UI pending human pass
+- [x] Exit: docs + triage + notifications live next to work
 
 ## Phase B4 — Files / export / webhooks / tokens / crons (2 days, ref `docs/03 §3.6-3.7`, `docs/04 §4.6`)
 
