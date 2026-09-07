@@ -598,7 +598,7 @@ model UserFavorite {
   workspaceId      String  @db.Uuid
   userId           String  @db.Uuid
   entityType       String
-  entityIdentifier String? @db.Uuid
+  entityIdentifier String  @db.Uuid
   name             String?
   parentId         String? @db.Uuid
   sequence         Float   @default(65535)
@@ -1023,4 +1023,46 @@ model APIActivityLog {
 
   @@index([tokenIdentifier])
   @@map("api_activity_logs")
+}
+
+// ---------- 6.3: workspace preferences (boot surface) ----------
+
+model WorkspaceUserLink {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @db.Uuid
+  ownerId     String  @db.Uuid
+  title       String?
+  url         String
+  metadata    Json    @default("{}")
+  sortOrder   Float   @default(65535)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("workspace_user_links")
+}
+
+model WorkspaceHomePreference {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @db.Uuid
+  userId      String  @db.Uuid
+  key         String
+  isEnabled   Boolean @default(true)
+  config      Json    @default("{}")
+  sortOrder   Float   @default(65535)
+
+  @@unique([workspaceId, userId, key])
+  @@map("workspace_home_preferences")
+}
+
+model WorkspaceUserPreference {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @db.Uuid
+  userId      String  @db.Uuid
+  key         String
+  isPinned    Boolean @default(false)
+  sortOrder   Float   @default(65535)
+
+  @@unique([workspaceId, userId, key])
+  @@map("workspace_user_preferences")
 }

@@ -98,7 +98,13 @@
   - Verified by curl: 70 rapid calls → exactly 60×200 + 10×429
 - [x] 6.2 SMTP delivery (`apps/backend/src/modules/mailer/`): global MailerService (Nodemailer, SMTP_* gated, never throws into request path); templates for magic code, password reset, workspace/project invites, notification digest; wired into auth (code/token echoed only when SMTP off AND dev), workspace invite (+inviter name), project invite, digest cron; digest cron now: raw NULL-safe SQL (`IS DISTINCT FROM 'true'`), per-user batching, `data.emailDigestSent` mark, try/catch with error log; SMTP_FROM in .env.example
   - Verified against a local debug SMTP server: magic email delivered + code NOT echoed, reset/invite emails delivered, cron fired 16:55:00 → digest email with all pending rows + marker set; found+fixed 2 bugs (Prisma Json `data:null` filter gap, `->>'text' IS NOT TRUE` SQL type error)
-- [ ] 6.3 Web UI click-through: script every API call the web makes on app boot + key pages (sign-in, workspace home, project issues/board/cycles/modules/pages/intake) against :4040; fix any 4xx/5xx; human visual pass recommended afterwards
+- [x] 6.3 Web UI click-through: boot+page API sequences scripted against :4040 — filled the remaining gaps so every surface returns 200:
+  - new models `WorkspaceUserLink/WorkspaceHomePreference/WorkspaceUserPreference` (+migration) with quick-links CRUD, home-preferences (5 default widgets, PATCH per widget), sidebar-preferences (GET/patch per key + bulk PATCH)
+  - boot endpoints: `workspace-members/me` (role + draft_issue_count shape), `users/me/workspaces` (list), `users/me/workspaces/invitations` (user-level), `users/me/workspaces/:slug/project-roles` (roles matrix), `entity-search` (empty shell), `release-notes` stub (@Public)
+  - favorites: generic `user-favorites` CRUD with entity hydration (`entity_data` per project/issue/view/cycle/module/page); `entityIdentifier` made NOT NULL (+migration, 0 nulls verified)
+  - analytics stubs: `advance-analytics/:tab`, `advance-analytics-stats/:tab`, `advance-analytics-charts/:graph` (200 + empty valid shapes; real aggregations later)
+  - verified: 29-endpoint boot+pages loop all 200; CORS preflight 204 + `Access-Control-Allow-Credentials` from :3000 origin; signup→me→workspaces browser-equivalent flow green; web rebuilt on :4040
+  - human visual pass still recommended (true browser click-through)
 
 ## Out of scope (do not build, do not tick)
 
