@@ -8,7 +8,7 @@
 open-task/
   apps/
     web/            # Plane frontend (React-Router SPA, as-copied). DO NOT rewrite. Only .env + branding.
-    backend/        # NEW NestJS API :8000 (TS only). See docs/01.
+    backend/        # NEW NestJS API :4040 (TS only). See docs/01.
     # api/          # legacy Python reference — DO NOT run, DO NOT install requirements. Delete after B1.
     # admin/space/live/proxy/ # parked for v1, keep folder but excluded from install/build
   packages/
@@ -19,7 +19,7 @@ open-task/
   package.json      # pnpm workspaces: apps/web + apps/backend + packages/*
   pnpm-workspace.yaml
   turbo.json        # tasks: build, dev, lint, typecheck, test
-  docker-compose.yml       # web:3000 + backend:8000 + db:5432 (v1, no redis/mq/minio)
+  docker-compose.yml       # web:3000 + backend:4040 + db:5432 (v1, no redis/mq/minio)
   docker-compose.dev.yml   # backend + db only for API dev
   .env.example
   PLAN.md
@@ -81,7 +81,7 @@ packages:
 * Routes: `app/routes/core.ts` — `/:workspaceSlug/projects/:projectId/{issues,cycles,modules,views,pages,intake}`.
 * State: MobX `CoreRootStore` via `useMobxStore()`, `resetOnSignOut()`. Path alias `@/* → core/*`.
 * Data: `core/services/* extends APIService` (axios `baseURL=VITE_API_BASE_URL`, `withCredentials:true`, 401→`/?next_path=`). Only `@plane/services` bits are tokens + upload helpers.
-* Env: `apps/web/.env` from `.env.example` — set `VITE_API_BASE_URL=http://localhost:8000`, `VITE_WEB_BASE_URL=http://localhost:3000`, rest empty v1.
+* Env: `apps/web/.env` from `.env.example` — set `VITE_API_BASE_URL=http://localhost:4040`, `VITE_WEB_BASE_URL=http://localhost:3000`, rest empty v1.
 * Change policy: `.env` + `public/` branding + `manifest.json` only. No store/service refactors in backend phases.
 
 ## 0.4 Backend pattern (`apps/backend` — NestJS, TS only)
@@ -122,13 +122,13 @@ Jobs: `@nestjs/schedule` `@Cron()` only (no BullMQ v1). Files local `./uploads`,
 DATABASE_URL=postgresql://open:open@localhost:5432/opentask
 SESSION_SECRET=change-me
 WEB_BASE_URL=http://localhost:3000
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:4040
 VITE_WEB_BASE_URL=http://localhost:3000
 SMTP_HOST/PORT/USER/PASS=
 UPLOAD_PROVIDER=local
 ```
 
-`docker-compose.yml` services: `db (postgres:16, volume pgdata)`, `backend (build apps/backend, :8000, env DATABASE_URL)`, `web (build apps/web, :3000, args VITE_API_BASE_URL)`. No `redis/mq/minio/live/admin/space` in v1.
+`docker-compose.yml` services: `db (postgres:16, volume pgdata)`, `backend (build apps/backend, :4040, env DATABASE_URL)`, `web (build apps/web, :3000, args VITE_API_BASE_URL)`. No `redis/mq/minio/live/admin/space` in v1.
 
 ## 0.7 Definition of done per change
 

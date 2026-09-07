@@ -3,10 +3,10 @@
 ## Phase B0 — Scaffold (1-2 days)
 
 * [ ] Create `apps/backend/` (Nest or Express+Zod — lock one) + `prisma/schema.prisma` from `02-database-schema.md` (User→Workspace→Project→State first)
-* [ ] `docker-compose.dev.yml`: `postgres:16 + backend:8000`; `DATABASE_URL`, `SESSION_SECRET`, `WEB_BASE_URL`
+* [ ] `docker-compose.dev.yml`: `postgres:16 + backend:4040`; `DATABASE_URL`, `SESSION_SECRET`, `WEB_BASE_URL`
 * [ ] Session auth: `sessions` table + cookie + `GET /auth/get-csrf-token/`, `POST /auth/email-check|sign-in|sign-up|sign-out`
 * [ ] Seed: default states (Backlog/Todo/In Progress/Done/Cancelled/Triage), demo workspace/project
-* [ ] Verify: `web` login → create workspace → create project (wire `VITE_API_BASE_URL=http://localhost:8000`)
+* [ ] Verify: `web` login → create workspace → create project (wire `VITE_API_BASE_URL=http://localhost:4040`)
 
 ## Phase B1 — Work items (first usable, 3-5 days)
 
@@ -43,7 +43,7 @@
 
 * [ ] Guards per `03 §3.5` (workspace ADMIN bypass), `isActive` checks, 401→web redirect compat
 * [ ] Partial unique migrations (`WHERE deletedAt IS NULL`), `pg_trgm` index, snake_case serializer for web compat
-* [ ] `Dockerfile` prod + compose `web:3000 + backend:8000 + db`, backup note
+* [ ] `Dockerfile` prod + compose `web:3000 + backend:4040 + db`, backup note
 * [ ] `typecheck + test (vitest) + build` green, smoke E2E: register → ENG-1 → board drag → cycle → module → page → intake → analytics stub
 
 ## Out of scope (do not build)

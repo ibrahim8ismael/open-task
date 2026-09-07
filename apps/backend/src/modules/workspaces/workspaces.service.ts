@@ -181,8 +181,16 @@ export class WorkspacesService {
 
   async invite(workspaceId: string, email: string, role: unknown): Promise<Record<string, unknown>> {
     const clean = email.trim().toLowerCase();
-    const existing = await this.prisma.workspaceMemberInvite.findFirst({ where: { workspaceId, email: clean, accepted: false } });
-    if (existing) return { id: existing.id, email: existing.email, role: roleToNum(existing.role), token: existing.token };
+    // Re-invite: refresh the existing row (unique [email, workspace]) instead of failing.
+    const existing = await this.prisma.workspaceMemberInvite.findFirst({ where: { workspaceId, email: clean } });
+    if (existing) {
+      const updated = await this.prisma.workspaceMemberInvite.update({
+        where: { id: existing.id },
+        data: { accepted: false, respondedAt: null, role: numToRole(role), token: inviteToken() },
+      });
+      // TODO: SMTP invitation email when SMTP_* configured
+      return { id: updated.id, email: updated.email, role: roleToNum(updated.role), token: updated.token };
+    }
     const row = await this.prisma.workspaceMemberInvite.create({
       data: { workspaceId, email: clean, role: numToRole(role), token: inviteToken() },
     });
@@ -204,6 +212,7 @@ export class WorkspacesService {
       where: { workspaceId: invite.workspaceId, memberId: userId },
     });
     if (existing) {
+      // Re-join (e.g. after leaving): reactivate with the invite's role.
       await this.prisma.workspaceMember.update({
         where: { id: existing.id },
         data: { isActive: true, deletedAt: null, role: invite.role },

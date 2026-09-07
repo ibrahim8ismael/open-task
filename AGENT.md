@@ -5,7 +5,7 @@
 ## 1. What this repo is
 
 * `apps/web/` — Plane frontend reused as-is (React-Router SPA, MobX, axios `withCredentials:true`). Branding/`.env` only, no refactors during backend phases.
-* `apps/backend/` (to build) — NEW NestJS API on `:8000` that satisfies `apps/web/core/services`.
+* `apps/backend/` (to build) — NEW NestJS API on `:4040` that satisfies `apps/web/core/services`.
 * `apps/api/` — legacy Python/Django reference ONLY. Never run, never `pip install`, never import. Delete after backend B1.
 * `apps/admin|space|live|proxy/` — parked for v1, excluded from workspaces.
 * `packages/` — shared TS packages for web build (`services`, `propel`, `typescript-config`, `decorators`, `logger` must be restored for web build).
@@ -34,8 +34,8 @@ Reference for logic only: `../plane-so` (clean-room, do not copy Python verbatim
 ```bash
 # root (once root package.json/pnpm-workspace.yaml/turbo.json exist)
 pnpm install --frozen-lockfile
-pnpm dev:backend   # Nest :8000
-pnpm dev:web       # web :3000 (needs VITE_API_BASE_URL=http://localhost:8000)
+pnpm dev:backend   # Nest :4040
+pnpm dev:web       # web :3000 (needs VITE_API_BASE_URL=http://localhost:4040)
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 # backend only

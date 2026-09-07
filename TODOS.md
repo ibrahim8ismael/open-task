@@ -85,12 +85,12 @@
 
 ## Phase B5 — Harden + ship (1–2 days, ref `docs/00 §0.7`, `AGENT.md §7-8`)
 
-- [ ] B5.1 Guards audit: workspace-ADMIN bypass, `isActive`, creator-allow, 401 shape (web `?next_path=` compat); `isTriage`/default-state paths covered
-- [ ] B5.2 DB: all partial uniques applied, `pg_trgm` index, snake_case interceptor on all controllers, cursor pagination everywhere
-- [ ] B5.3 Prod: backend `Dockerfile`, root compose `web:3000+backend:8000+db`, volume `pgdata`, backup note, `ADMIN_EMAILS` superadmin seed; remove legacy `apps/api/` + parked-app references from docs if deleted
-- [ ] B5.4 Quality: root `typecheck+lint+test+build` green; smoke E2E `register → workspace → project → ENG-1 → board drag → cycle → module → page → intake → export`
-- [ ] B5.5 Docs: tick this file, update `docs/04` for any drift, re-create slim `PLAN.md` pointer if wanted
-- [ ] Exit: internal URL + onboarding runbook
+- [x] B5.1 Guards audit: non-member 403, ws-ADMIN bypass 200 (re-verified after w2 rejoin), inactive user 401, 401 shape `{detail}` (web interceptor compatible); GUEST read / MEMBER write / ADMIN delete enforced per module; invite re-send fixed (refresh existing row instead of P2002 500; join reactivates membership)
+- [x] B5.2 DB: partial uniques + pg_trgm migration `20260907141000_b5_partial_uniques` (projects identifier/name, states, intakes, issues project+sequence, webhooks url; gin trgm on issues/projects names); serializers emit snake_case directly (no interceptor needed); list endpoints share the TIssuesResponse cursor envelope
+- [x] B5.3 Prod: backend `Dockerfile` (B0) + root compose `db + backend:4040 + web:3000` (uploads/exports volumes, ADMIN_EMAILS env); `ADMIN_EMAILS`/`ADMIN_INITIAL_PASSWORD` superadmin seed in `prisma/seed.ts` (verified: admin created + ensured); `README.md` runbook (dev/prod/backup/health)
+- [x] B5.4 Quality: backend `check:types + check:lint (0 warnings) + test (passWithNoTests) + build` green; web `check:types + check:lint` green; smoke E2E on :4040 green — register→signin redirect→workspace→project (SMK)→ENG-1→board drag (state+sort persisted)→cycle (progress 1/started 1)→module (in-progress, progress)→page (1 version)→intake create+accept→visible→csv export (2 rows)
+- [x] B5.5 Docs: TODOS ticked; docs/04 base URL updated to :4040 + shipped-endpoints note; README runbook added; `PLAN.md` not re-created (TODOS.md + AGENT.md are the live plan)
+- [x] Exit: internal URL (:4040 backend / :3000 web) + onboarding runbook
 
 ## Out of scope (do not build, do not tick)
 

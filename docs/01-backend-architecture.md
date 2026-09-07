@@ -43,7 +43,7 @@ Why NestJS (locked, not Express/Fastify-plain): Plane permission model (`WORKSPA
 From audit of `apps/web`:
 
 * Transport: `axios.create({ baseURL: VITE_API_BASE_URL, withCredentials: true })` in `core/services/api.service.ts`. Only `@plane/services` usage is API-tokens + file-upload helpers; rest is inline `core/services/*`.
-* Base: `VITE_API_BASE_URL` (required, e.g. `http://localhost:8000`), `API_BASE_PATH=""`. Endpoints like `GET /auth/get-csrf-token/`, `POST /auth/email-check/`, `/api/instances/`, `/api/users/me/`.
+* Base: `VITE_API_BASE_URL` (required, e.g. `http://localhost:4040`), `API_BASE_PATH=""`. Endpoints like `GET /auth/get-csrf-token/`, `POST /auth/email-check/`, `/api/instances/`, `/api/users/me/`.
 * Auth: cookie session (Django `login()` stores `session.device_info`). No JWT in web flow. Our TS backend must set HTTP-only session cookie + support `X-Api-Token: plane_api_*` for token auth (see 04).
 * Env to provide: `VITE_API_BASE_URL`, `VITE_WEB_BASE_URL=:3000`, `ADMIN_:3001`, `SPACE_:3002`, `LIVE_:3100` (last three can be empty in v1).
 

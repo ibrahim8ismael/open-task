@@ -27,18 +27,21 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-open}:${POSTGRES_PASSWORD:-open}@db:5432/${POSTGRES_DB:-opentask}
       SESSION_SECRET: ${SESSION_SECRET:-change-me-in-prod-min-32-chars}
       WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
-      PORT: 8000
+      PORT: 4040
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
     ports:
-      - "8000:8000"
+      - "4040:4040"
     volumes:
       - ./uploads:/app/apps/backend/uploads
+      - ./exports:/app/apps/backend/exports
 
   web:
     build:
       context: .
       dockerfile: ./apps/web/Dockerfile.web
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4040}
         VITE_WEB_BASE_URL: ${VITE_WEB_BASE_URL:-http://localhost:3000}
     depends_on:
       - backend

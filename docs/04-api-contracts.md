@@ -1,6 +1,8 @@
 # 04 — API Contracts (TS backend must satisfy `apps/web`, no AI routes)
 
-> Base: `VITE_API_BASE_URL` + `withCredentials:true` (cookie) or `X-Api-Token: plane_api_*`. Prefix `/api/...`, auth under `/auth/...`. Trailing slash compatible (`/path/` and `/path`). AI endpoints omitted.
+> Base: `VITE_API_BASE_URL` (**`http://localhost:4040`** in this repo) + `withCredentials:true` (cookie) or `X-Api-Token: plane_api_*`. Prefix `/api/...`, auth under `/auth/...`. Trailing slash compatible (`/path/` and `/path`). AI endpoints omitted.
+>
+> Shipped beyond the list below (B1.6/B2/B3 gap batches): `GET /projects/details/`, `GET /project-stats/`, project `user-properties` GET|PATCH, `members/me`, `search-issues`, `user-favorite-projects`, project-invite accept, `active-cycles`, issue `remove-relation`, `attachments v2` register/upload/serve, archived/deleted lists, `bulk-*` issues, comments + reactions, links, versions/history/meta, inbox-issues triage (numeric status -2..2), notifications, stickies, draft-issues + draft-to-issue, recent-visits, webhooks (+logs/regenerate), export-issues + token downloads, api-tokens, timezones.
 
 ## 4.1 Auth `/auth/*` (form-POST compatible, JSON responses)
 
