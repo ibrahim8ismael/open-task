@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import type { ModuleStatus } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { IssuesService, serializeBaseIssue } from "../issues/issues.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 
 /** Wire uses "in-progress" (Django); Prisma member is in_progress. */
 export function toModuleStatus(value: unknown): ModuleStatus {
@@ -32,6 +33,7 @@ export class ModulesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly issues: IssuesService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async workspaceOrThrow(slug: string): Promise<{ id: string }> {
@@ -160,6 +162,7 @@ export class ModulesService {
         skipDuplicates: true,
       });
     }
+    this.webhooks.fire(ws.id, "module.created", { id: row.id, workspace: ws.id, project: pid, name: row.name });
     return this.serialize(row as ModuleRow, userId);
   }
 
@@ -206,6 +209,7 @@ export class ModulesService {
         });
       }
     }
+    this.webhooks.fire(ws.id, "module.updated", { id: module.id, workspace: ws.id, project: pid });
     return this.serialize(updated as ModuleRow, userId);
   }
 
@@ -218,6 +222,7 @@ export class ModulesService {
       this.prisma.moduleMember.deleteMany({ where: { moduleId: module.id } }),
       this.prisma.module.update({ where: { id: module.id }, data: { deletedAt: new Date() } }),
     ]);
+    this.webhooks.fire(ws.id, "module.deleted", { id: module.id, workspace: ws.id, project: pid });
     return { detail: "Module deleted." };
   }
 

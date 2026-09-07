@@ -74,12 +74,14 @@
 - [x] B4.1 Files: `FileAsset` local upload + meta, `FILE_SIZE_LIMIT=5MB` (done in B1 assets module; orphan GC lands in B4.5) + ops models migration `b4-ops-models` (ExporterHistory/Webhook/WebhookLog/APIToken/APIActivityLog)
 - [x] B4.2 Export: `ExporterHistory{workspace,projectIds[],provider csv|xlsx|json,token}`; `POST /export-issues/` (synchronous build at internal scale, 7d token URL) + `GET` history + `GET /api/exports/:token/download/` (404/410 handling); `purgeExpired()` ready for the B4.5 cron
   - Verified by curl: csv (ENG keys, states, labels), json (6 rows), xlsx (7KB), history (3), bad token 404
-- [ ] B4.3 Webhooks: `Webhook{url http/https no-localhost, secretKey plane_wh_*, isActive}` unique workspace/url; `CRUD + regenerate + logs`; HMAC POST + retry + `WebhookLog` + retention purge; secret hidden unless `?show_secret`
-- [ ] B4.4 Tokens: `APIToken{token plane_api_*, isActive, expiredAt}`; `GET|POST|DELETE /api/users/api-tokens/`; `X-Api-Token` guard + 60/min limit
-- [ ] B4.5 Crons (`@nestjs/schedule`, no BullMQ v1): `*/5 * * * *` notify fanout (Nodemailer TS stub + `EmailNotificationLog`), `0 0 * * *` hard-delete (`deletedAt` older than retention) + retention (api/email logs, page/issue versions, webhook logs), `0 1 * * *` archive_and_close (`archiveIn`/`closeIn` per `docs/03 §3.6`)
-- [ ] B4.6 Stubs: `GET /api/instances/` (static), `GET /api/timezones/`, `GET /health`
-- [ ] B4.7 Verify: web attachments upload, export download, webhook log row, token auth works
-- [ ] Exit: ops surface complete for v1
+- [x] B4.3 Webhooks (`apps/backend/src/modules/webhooks/`): CRUD (unique workspace/url, http/https, SSRF guard blocks localhost/private ranges with `WEBHOOK_ALLOW_PRIVATE=1` dev escape), regenerate (new `plane_wh_*`), secret hidden unless `?show_secret_key=true`, fire-and-forget HMAC fanout (`x-plane-signature`, 5s timeout, 1 retry) on issue/project/cycle/module events, WebhookLog rows + purgeLogs(30d)
+  - Verified by curl: local catcher received `issue.created` + valid sig + payload (ENG-8), log row 200, secret hidden by default, regenerate rotates, localhost 400 when guard on
+- [x] B4.4 Tokens (`apps/backend/src/modules/apitokens/`): `GET|POST|DELETE /api/users/api-tokens/` (`plane_api_*` full value shown once at create), SessionAuthGuard accepts `X-Api-Token` (validates isActive/expiry, stamps lastUsed, writes APIActivityLog); 60/min limit TODO with rate-limit pack in B5
+  - Verified by curl: create→list, API call via token (no cookie), bad token 401, deleted token 401, DB-expired token 401 (note: `expires_in_days:0` = no expiry by falsy design)
+- [x] B4.5 Crons (`apps/backend/src/modules/crons/`): `*/5 * * * *` notify fanout stub (SMTP-gated TODO), hourly GC (orphan assets >24h, disk sweep vs FileAsset rows, webhook logs >30d, expired exports), `0 0 * * *` hard-delete (issues→pages/cycles/modules/projects/workspaces past HARD_DELETE_AFTER_DAYS), `0 1 * * *` archive_and_close (archiveIn→archivedAt, closeIn→cancel/default state)
+- [x] B4.6 Stubs: `GET /api/instances/` (done in B0), `GET /api/timezones/` (13 zones, TTimezones shape), `GET /health`
+- [x] B4.7 Verify: attachments (B1), export csv/json/xlsx downloads (B4.2), webhook delivery + log row, token auth incl. expiry — all green; backend moved to `:4040` per owner (8000 stays free)
+- [x] Exit: ops surface complete for v1
 
 ## Phase B5 — Harden + ship (1–2 days, ref `docs/00 §0.7`, `AGENT.md §7-8`)
 

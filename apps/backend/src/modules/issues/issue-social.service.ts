@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 import { IssuesService } from "./issues.service";
 
 function serializeComment(c: {
@@ -37,6 +38,7 @@ export class IssueSocialService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly issues: IssuesService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   // --- comments ---
@@ -71,6 +73,7 @@ export class IssueSocialService {
       },
     });
     await this.issues.logActivity(issue.id, userId, "commented");
+    this.webhooks.fire(issue.workspaceId, "issue.commented", { id: issue.id, workspace: issue.workspaceId, project: issue.projectId, comment: row.id });
     return serializeComment(row);
   }
 

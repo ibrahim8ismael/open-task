@@ -3,6 +3,7 @@ import { DEFAULT_STATES } from "../../common/utils/default-states";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { inviteToken, numToRole, roleToNum } from "../../common/utils/roles";
 import { serializeWorkspace, WorkspacesService } from "../workspaces/workspaces.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 
 interface ProjectRow {
   id: string;
@@ -59,6 +60,7 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async projectOrThrow(workspaceId: string, projectId: string): Promise<ProjectRow> {
@@ -140,6 +142,7 @@ export class ProjectsService {
       }
       return tx.project.update({ where: { id: project.id }, data: { defaultStateId } });
     });
+    this.webhooks.fire(ws.id, "project.created", { id: created.id, workspace: ws.id, name: created.name });
     return serializeProject(created);
   }
 
@@ -166,6 +169,7 @@ export class ProjectsService {
         ...(dto.close_in !== undefined ? { closeIn: dto.close_in } : {}),
       },
     });
+    this.webhooks.fire(ws.id, "project.updated", { id: p.id, workspace: ws.id });
     return serializeProject(updated);
   }
 
@@ -173,6 +177,7 @@ export class ProjectsService {
     const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
     const p = await this.projectOrThrow(ws.id, projectId);
     await this.prisma.project.update({ where: { id: p.id }, data: { deletedAt: new Date() } });
+    this.webhooks.fire(ws.id, "project.deleted", { id: p.id, workspace: ws.id });
     return { detail: "Project deleted." };
   }
 

@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 import { ProjectsService } from "../projects/projects.service";
 
 export interface IssueCounts {
@@ -93,6 +94,7 @@ export class IssuesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly projects: ProjectsService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async countsFor(issueIds: string[]): Promise<IssueCounts> {
@@ -264,6 +266,13 @@ export class IssuesService {
     });
 
     await this.logActivity(created.id, userId, "created");
+    this.webhooks.fire(ws.id, "issue.created", {
+      id: created.id,
+      workspace: ws.id,
+      project: project.id,
+      sequence_id: created.sequenceId,
+      name: created.name,
+    });
     const counts = await this.countsFor([created.id]);
     return serializeBaseIssue(created as IssueRow, counts);
   }
@@ -349,6 +358,12 @@ export class IssuesService {
       activities.map((a) => this.logActivity(issue.id, userId, "updated", a.field, a.oldV, a.newV)),
     );
     if (activities.length === 0) await this.logActivity(issue.id, userId, "updated");
+    this.webhooks.fire(issue.workspaceId, "issue.updated", {
+      id: issue.id,
+      workspace: issue.workspaceId,
+      project: issue.projectId,
+      fields: activities.map((a) => a.field),
+    });
 
     if (dto.assignee_ids !== undefined) {
       await this.prisma.issueAssignee.deleteMany({ where: { issueId: issue.id } });
@@ -444,6 +459,7 @@ export class IssuesService {
       data: { deleted: true },
     });
     await this.logActivity(issue.id, userId, "deleted");
+    this.webhooks.fire(issue.workspaceId, "issue.deleted", { id: issue.id, workspace: issue.workspaceId, project: issue.projectId });
     return { detail: "Issue deleted." };
   }
 
@@ -460,6 +476,11 @@ export class IssuesService {
       data: { archivedAt: archived ? new Date() : null, updatedBy: userId },
     });
     await this.logActivity(issue.id, userId, archived ? "archived" : "unarchived");
+    this.webhooks.fire(issue.workspaceId, archived ? "issue.archived" : "issue.unarchived", {
+      id: issue.id,
+      workspace: issue.workspaceId,
+      project: issue.projectId,
+    });
     const counts = await this.countsFor([issue.id]);
     return serializeBaseIssue(updated as IssueRow, counts);
   }

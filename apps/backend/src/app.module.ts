@@ -5,12 +5,15 @@ import { ScheduleModule } from "@nestjs/schedule";
 import { RolesGuard } from "./common/guards/roles.guard";
 import { SessionAuthGuard } from "./common/guards/session-auth.guard";
 import { PrismaModule } from "./common/prisma/prisma.module";
+import { ApiTokensModule } from "./modules/apitokens/apitokens.module";
 import { AssetsModule } from "./modules/assets/assets.module";
+import { CronsModule } from "./modules/crons/crons.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { ExporterModule } from "./modules/exporter/exporter.module";
+import { IntakeModule } from "./modules/intake/intake.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InstancesModule } from "./modules/instances/instances.module";
-import { IntakeModule } from "./modules/intake/intake.module";
+import { MiscModule } from "./modules/misc/misc.module";
 import { IssuesModule } from "./modules/issues/issues.module";
 import { PagesModule } from "./modules/pages/pages.module";
 import { SocialModule } from "./modules/social/social.module";
@@ -28,7 +31,9 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
     PrismaModule,
     HealthModule,
     InstancesModule,
+    MiscModule,
     AuthModule,
+    ApiTokensModule,
     ExporterModule,
     UsersModule,
     WorkspacesModule,
@@ -41,6 +46,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
     TrackingModule,
     ViewsModule,
     AssetsModule,
+    CronsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: SessionAuthGuard },

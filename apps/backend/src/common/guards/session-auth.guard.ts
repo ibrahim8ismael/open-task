@@ -2,12 +2,14 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from "@nestjs/core";
 import { IS_PUBLIC_KEY } from "../decorators/auth.decorators";
 import { PrismaService } from "../prisma/prisma.service";
+import { ApiTokensService } from "../../modules/apitokens/apitokens.service";
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
+    private readonly tokens: ApiTokensService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -17,6 +19,26 @@ export class SessionAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
     const req = ctx.switchToHttp().getRequest();
+
+    // Token auth first: X-Api-Token: plane_api_* (scripts/integrations)
+    const apiToken = req.headers?.["x-api-token"];
+    if (typeof apiToken === "string" && apiToken.startsWith("plane_api_")) {
+      const res = await this.tokens.verify(apiToken, {
+        path: req.originalUrl ?? req.url,
+        method: req.method,
+      });
+      if (res) {
+        const tokenUser = await this.prisma.user.findUnique({ where: { id: res.userId } });
+        if (tokenUser?.isActive) {
+          req.user = { id: tokenUser.id, email: tokenUser.email, sessionKey: "" };
+          req.authVia = "token";
+          return true;
+        }
+      }
+      throw new UnauthorizedException({ detail: "Invalid or expired API token." });
+    }
+
+    // Session cookie auth (apps/web)
     const sessionKey: string | undefined = req.cookies?.["session-id"];
     if (!sessionKey) throw new UnauthorizedException({ detail: "Authentication required." });
     const session = await this.prisma.session.findUnique({ where: { sessionKey } });

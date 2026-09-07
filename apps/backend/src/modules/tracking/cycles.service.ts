@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { WebhooksService } from "../webhooks/webhooks.service";
 import { IssuesService, serializeBaseIssue } from "../issues/issues.service";
 
 type CycleRow = {
@@ -59,6 +60,7 @@ export class CyclesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly issues: IssuesService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async workspaceOrThrow(slug: string): Promise<{ id: string }> {
@@ -205,6 +207,7 @@ export class CyclesService {
         updatedBy: userId,
       },
     });
+    this.webhooks.fire(ws.id, "cycle.created", { id: row.id, workspace: ws.id, project: pid, name: row.name });
     return this.serialize(row as CycleRow, userId);
   }
 
@@ -243,6 +246,7 @@ export class CyclesService {
         updatedBy: userId,
       },
     });
+    this.webhooks.fire(ws.id, "cycle.updated", { id: cycle.id, workspace: ws.id, project: pid });
     return this.serialize(updated as CycleRow, userId);
   }
 
@@ -254,6 +258,7 @@ export class CyclesService {
       this.prisma.cycleIssue.deleteMany({ where: { cycleId: cycle.id } }),
       this.prisma.cycle.update({ where: { id: cycle.id }, data: { deletedAt: new Date() } }),
     ]);
+    this.webhooks.fire(ws.id, "cycle.deleted", { id: cycle.id, workspace: ws.id, project: pid });
     return { detail: "Cycle deleted." };
   }
 
