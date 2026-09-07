@@ -301,6 +301,8 @@ model Label {
   description String    @default("")
   color       String    @default("")
   sortOrder   Float     @default(65535)
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -313,8 +315,11 @@ model Estimate {
   projectId   String       @db.Uuid
   workspaceId String       @db.Uuid
   name        String
+  description String       @default("")
   type        EstimateType @default(categories)
   lastUsed    Boolean      @default(false)
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
@@ -391,6 +396,8 @@ model Issue {
   archivedAt        DateTime?      @db.Date
   isDraft           Boolean        @default(false)
   point             Int?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   deletedAt         DateTime?
@@ -461,6 +468,8 @@ model IssueComment {
   commentStripped String   @default("")
   access         String    @default("INTERNAL")
   editedAt       DateTime?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
@@ -574,9 +583,46 @@ model IssueView {
   sortOrder         Float     @default(65535)
   isLocked          Boolean   @default(false)
   archivedAt        DateTime?
+  createdBy String?  @db.Uuid
+  updatedBy String?  @db.Uuid
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
 
   @@map("issue_views")
+}
+
+model UserFavorite {
+  id               String  @id @default(uuid()) @db.Uuid
+  workspaceId      String  @db.Uuid
+  userId           String  @db.Uuid
+  entityType       String
+  entityIdentifier String? @db.Uuid
+  name             String?
+  parentId         String? @db.Uuid
+  sequence         Float   @default(65535)
+
+  @@unique([entityType, entityIdentifier, userId])
+  @@map("user_favorites")
+}
+
+model FileAsset {
+  id               String   @id @default(uuid()) @db.Uuid
+  asset            String
+  attributes       Json     @default("{}")
+  size             Float    @default(0)
+  entityType       String?
+  entityIdentifier String?
+  isUploaded       Boolean  @default(false)
+  isDeleted        Boolean  @default(false)
+  storageMetadata  Json?
+  userId           String?  @db.Uuid
+  workspaceId      String?  @db.Uuid
+  projectId        String?  @db.Uuid
+  issueId          String?  @db.Uuid
+  pageId           String?  @db.Uuid
+  createdAt        DateTime @default(now())
+
+  @@index([entityType, entityIdentifier])
+  @@map("file_assets")
 }

@@ -31,7 +31,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./uploads:/app/uploads
+      - ./uploads:/app/apps/backend/uploads
 
   web:
     build:

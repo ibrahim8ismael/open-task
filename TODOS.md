@@ -39,8 +39,10 @@
 - [x] B1.2 Rules: sequence TX (pg_advisory_xact_lock, never reuse — verified ENG-4 after ENG-2 delete), default-state fallback, sortOrder MAX+10000, completedAt sync on state change (verified set on Done), version snapshot + per-field activity rows, `issueVisible()` scope
 - [x] B1.3 Issue endpoints: CRUD, list (filters/state/priority/assignee/label/type/point/dates/search, order_by, group_by, offset-cursor envelope), POST list/detail/v2 aliases, ENG-123 lookup, sub-issues, archive/unarchive + archived/deleted lists, bulk op/delete/archive/subscribe (parallel), relations + remove-relation, subscribe GET/POST/DELETE, history/meta/versions, comments + comment/issue reactions, links, local attachments (assets/v2 register→upload→serve→delete, 5MB, traversal-safe)
   - Verified by curl: ENG-1..4 sequencing, grouping/filter/search/pagination+cursors, detail shape (38 keys), Done→completedAt, history+versions, relation dup-403 + remove, subscribe toggle, meta counts, comments/reactions/links, attachment bytes round-trip, labels attach, non-member 403
-- [ ] B1.4 Taxonomy endpoints `docs/04 §4.5`: states (+mark-default), labels, estimates (+points), issue-types
-- [ ] B1.5 Views + search: `IssueView` CRUD (+lock), Postgres `ILIKE+pg_trgm` `GET /api/search/?q=`
+- [x] B1.4 Taxonomy endpoints `docs/04 §4.5`: states (CRUD, mark-default, intake-state, workspace list; default-delete + in-use-delete blocked), labels (CRUD, bulk-create, workspace list), estimates (+points CRUD, workspace list), issue-types (+project attach/detach)
+  - Verified by curl: 6 seeded states, mark-default switch, bulk labels (dup skipped), estimate+point round-trip, issue-type create
+- [x] B1.5 Views + search: `IssueView` CRUD (+lock guard, workspace + project scopes), view-issues (saved filters merged into list pipeline), user-favorite-views, workspace-views alias, `GET /api/workspaces/:slug/search/` (ILIKE issues+projects, member-scoped, exact web shape)
+  - Verified by curl: view create→filtered issues (total 1), favorite round-trip, search finds ENG issues
 - [ ] B1.6 Verify: web List/Board/Calendar render; board drag persists `sortOrder`+`state`; drawer edits persist; `ENG-1` lookup works
 - [ ] Exit: team can run a project end-to-end on board+list; then schedule delete of legacy `apps/api/` reference
 
