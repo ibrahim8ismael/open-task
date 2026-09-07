@@ -144,6 +144,7 @@ export class ProjectsController {
   invite(
     @Param("slug") slug: string,
     @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
     @Body() dto: { email: string; role?: unknown },
   ): Promise<Record<string, unknown>> {
     return this.projects.invite(slug, id, dto.email, dto.role);

@@ -96,7 +96,8 @@
 
 - [x] 6.1 API-token rate limit: `parseRateLimit("60/minute")` util; SessionAuthGuard token path returns 429 `{detail}` after limit; `API_KEY_RATE_LIMIT` env in .env.example
   - Verified by curl: 70 rapid calls → exactly 60×200 + 10×429
-- [ ] 6.2 SMTP delivery (Nodemailer, SMTP_* gated): magic codes, password reset links, workspace/project invitations, notification digest cron (marks `data.emailDigestSent`); dev fallback stays (code/token in response when AUTH_RETURN_CODES_DEV)
+- [x] 6.2 SMTP delivery (`apps/backend/src/modules/mailer/`): global MailerService (Nodemailer, SMTP_* gated, never throws into request path); templates for magic code, password reset, workspace/project invites, notification digest; wired into auth (code/token echoed only when SMTP off AND dev), workspace invite (+inviter name), project invite, digest cron; digest cron now: raw NULL-safe SQL (`IS DISTINCT FROM 'true'`), per-user batching, `data.emailDigestSent` mark, try/catch with error log; SMTP_FROM in .env.example
+  - Verified against a local debug SMTP server: magic email delivered + code NOT echoed, reset/invite emails delivered, cron fired 16:55:00 → digest email with all pending rows + marker set; found+fixed 2 bugs (Prisma Json `data:null` filter gap, `->>'text' IS NOT TRUE` SQL type error)
 - [ ] 6.3 Web UI click-through: script every API call the web makes on app boot + key pages (sign-in, workspace home, project issues/board/cycles/modules/pages/intake) against :4040; fix any 4xx/5xx; human visual pass recommended afterwards
 
 ## Out of scope (do not build, do not tick)

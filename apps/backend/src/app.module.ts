@@ -13,6 +13,7 @@ import { ExporterModule } from "./modules/exporter/exporter.module";
 import { IntakeModule } from "./modules/intake/intake.module";
 import { HealthModule } from "./modules/health/health.module";
 import { InstancesModule } from "./modules/instances/instances.module";
+import { MailerModule } from "./modules/mailer/mailer.module";
 import { MiscModule } from "./modules/misc/misc.module";
 import { IssuesModule } from "./modules/issues/issues.module";
 import { PagesModule } from "./modules/pages/pages.module";
@@ -29,6 +30,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    MailerModule,
     HealthModule,
     InstancesModule,
     MiscModule,

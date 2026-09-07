@@ -3,6 +3,7 @@ import { DEFAULT_STATES } from "../../common/utils/default-states";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { inviteToken, numToRole, roleToNum } from "../../common/utils/roles";
 import { serializeWorkspace, WorkspacesService } from "../workspaces/workspaces.service";
+import { MailerService } from "../mailer/mailer.service";
 import { WebhooksService } from "../webhooks/webhooks.service";
 
 interface ProjectRow {
@@ -61,6 +62,7 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly workspaces: WorkspacesService,
     private readonly webhooks: WebhooksService,
+    private readonly mailer: MailerService,
   ) {}
 
   async projectOrThrow(workspaceId: string, projectId: string): Promise<ProjectRow> {
@@ -285,13 +287,15 @@ export class ProjectsService {
     projectId: string,
     email: string,
     role: unknown,
+    inviterName?: string,
   ): Promise<Record<string, unknown>> {
     const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
-    await this.projectOrThrow(ws.id, projectId);
+    const project = await this.projectOrThrow(ws.id, projectId);
     const clean = email.trim().toLowerCase();
     const row = await this.prisma.projectMemberInvite.create({
       data: { projectId, workspaceId: ws.id, email: clean, role: numToRole(role), token: inviteToken() },
     });
+    await this.mailer.sendProjectInvite(clean, project.name, inviterName ?? "A teammate");
     return { id: row.id, email: row.email, role: roleToNum(row.role), token: row.token };
   }
 

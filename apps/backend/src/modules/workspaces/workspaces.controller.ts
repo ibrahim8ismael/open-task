@@ -104,10 +104,13 @@ export class WorkspacesController {
   @Roles("MEMBER")
   async invite(
     @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
     @Body() dto: InviteDto,
   ): Promise<Record<string, unknown>> {
     const ws = await this.workspaces.workspaceOrThrow(slug);
-    return this.workspaces.invite(ws.id, dto.email, dto.role);
+    const me = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    const inviterName = me.displayName || me.email || "A teammate";
+    return this.workspaces.invite(ws.id, dto.email, dto.role, inviterName);
   }
 
   @Post(":slug/invitations/:id/join")

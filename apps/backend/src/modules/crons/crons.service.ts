@@ -6,6 +6,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
 import { ExporterService } from "../exporter/exporter.service";
 import { uploadDir } from "../assets/assets.service";
 import { WebhooksService } from "../webhooks/webhooks.service";
+import { MailerService } from "../mailer/mailer.service";
 
 const HARD_DELETE_DAYS = Number(process.env.HARD_DELETE_AFTER_DAYS ?? 30);
 
@@ -17,18 +18,66 @@ export class CronsService {
     private readonly prisma: PrismaService,
     private readonly exporter: ExporterService,
     private readonly webhooks: WebhooksService,
+    private readonly mailer: MailerService,
   ) {}
 
-  /** Every 5 minutes: notification fanout stub. Notifications are already
-   * written synchronously by services; this job is the SMTP dispatch point.
-   * Nodemailer delivery activates when SMTP_* env vars are configured. */
+  /** Every 5 minutes: email a digest of unread notifications per user.
+   * No-ops entirely when SMTP is not configured. Marks sent notifications
+   * with data.emailDigestSent so each email is sent once. */
   @Cron("*/5 * * * *")
   async stackNotifications(): Promise<void> {
-    const smtpConfigured = !!process.env.SMTP_HOST;
-    if (smtpConfigured) {
-      // TODO: batch unread notifications -> templated email via Nodemailer
-      this.logger.debug("SMTP configured; email fanout TODO");
+    if (!process.env.SMTP_HOST) return;
+    try {
+      await this.digestBatch();
+    } catch (err) {
+      this.logger.error(`digest failed: ${err instanceof Error ? err.message : err}`);
     }
+  }
+
+  private async digestBatch(): Promise<void> {
+    // Raw filter: `data IS NULL` rows must be included (Prisma Json filters
+    // cannot express "null OR not marked"); `->>'` yields text so compare
+    // with IS DISTINCT FROM (NULL-safe), not IS NOT TRUE; columns quoted.
+    const pending = (await this.prisma.$queryRaw`
+      SELECT "id", "receiverId", "title", "data"
+      FROM "notifications"
+      WHERE "readAt" IS NULL AND "archivedAt" IS NULL
+        AND "data"->>'emailDigestSent' IS DISTINCT FROM 'true'
+      LIMIT 2000
+    `) as Array<{ id: string; receiverId: string; title: string; data: unknown }>;
+    if (!pending.length) return;
+    const byReceiver = new Map<string, typeof pending>();
+    for (const n of pending) {
+      const arr = byReceiver.get(n.receiverId) ?? [];
+      arr.push(n);
+      byReceiver.set(n.receiverId, arr);
+    }
+    let sent = 0;
+    await Promise.all(
+      [...byReceiver.entries()].map(async ([receiverId, items]) => {
+        const user = await this.prisma.user.findUnique({ where: { id: receiverId } });
+        if (!user?.email) return;
+        const delivered = await this.mailer.sendNotificationDigest(
+          user.email,
+          user.displayName,
+          items.map((i) => ({ title: i.title })),
+        );
+        if (delivered) {
+          sent += 1;
+          await Promise.all(
+            items.map((i) =>
+              this.prisma.notification
+                .update({
+                  where: { id: i.id },
+                  data: { data: Object.assign({}, i.data ?? {}, { emailDigestSent: true }) },
+                })
+                .catch(() => undefined),
+            ),
+          );
+        }
+      }),
+    );
+    if (sent) this.logger.log(`digest: emailed ${sent} user(s)`);
   }
 
   /** Hourly: GC un-uploaded assets (>24h), purge webhook logs >30d, expired exports. */

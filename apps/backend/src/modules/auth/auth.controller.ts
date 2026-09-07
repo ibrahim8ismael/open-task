@@ -141,8 +141,9 @@ export class AuthController {
     const email = this.auth.normalizeEmail(dto.email);
     if (!this.auth.validEmail(email)) return { detail: "If the email exists, a code was sent." };
     const { code, dev } = await this.auth.issueMagicCode(email);
-    // TODO: SMTP delivery via Nodemailer when SMTP_* configured
-    return dev ? { detail: "Code generated (dev only).", code } : { detail: "If the email exists, a code was sent." };
+    // SMTP delivery inside issueMagicCode; dev fallback echoes the code
+    void dev;
+    return code ? { detail: "Code generated (dev only).", code } : { detail: "If the email exists, a code was sent." };
   }
 
   private async magicLogin(
@@ -199,10 +200,10 @@ export class AuthController {
       ? await this.prisma.user.findUnique({ where: { email } })
       : null;
     if (!user) return { detail: "If the email exists, a reset link was sent." };
-    const token = await this.auth.issueResetToken(user.id);
-    // TODO: SMTP delivery; dev returns token so flows are testable
-    if (this.auth.returnCodesDev()) return { detail: "Reset token generated (dev only).", token };
-    return { detail: "If the email exists, a reset link was sent." };
+    const { token, hasEmail } = await this.auth.issueResetToken(user.id);
+    // Token echoed only when SMTP could not deliver AND dev mode (testability)
+    if (token && this.auth.returnCodesDev()) return { detail: "Reset token generated (dev only).", token };
+    return { detail: "If the email exists, a reset link was sent." + (hasEmail ? "" : " (no email on file)") };
   }
 
   @Public()

@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
 import type { Response } from "express";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MailerService } from "../mailer/mailer.service";
 
 const SESSION_COOKIE = "session-id";
 const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -16,7 +17,10 @@ export interface SessionUser {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailer: MailerService,
+  ) {}
 
   webBase(): string {
     return (process.env.WEB_BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
@@ -105,8 +109,9 @@ export class AuthService {
     await this.prisma.magicCode.create({
       data: { email: normalized, codeHash, expiresAt: new Date(Date.now() + MAGIC_TTL_MS) },
     });
-    // TODO: send via SMTP (Nodemailer) when SMTP_* configured; log instead in v1
-    return { code, dev: this.returnCodesDev() };
+    const delivered = await this.mailer.sendMagicCode(normalized, code);
+    // Code echoed in the API response only when SMTP is off AND dev mode
+    return { code: delivered ? "" : code, dev: this.returnCodesDev() && !delivered };
   }
 
   async consumeMagicCode(email: string, code: string): Promise<"ok" | "invalid" | "expired"> {
@@ -124,13 +129,18 @@ export class AuthService {
 
   // --- password reset ---
 
-  async issueResetToken(userId: string): Promise<string> {
+  async issueResetToken(userId: string): Promise<{ token: string; hasEmail: boolean }> {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const token = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(token).digest("hex");
     await this.prisma.passwordResetToken.create({
       data: { userId, tokenHash, expiresAt: new Date(Date.now() + RESET_TTL_MS) },
     });
-    return token;
+    if (user.email) {
+      const delivered = await this.mailer.sendPasswordReset(user.email, userId, token);
+      return { token: delivered ? "" : token, hasEmail: true };
+    }
+    return { token, hasEmail: false };
   }
 
   async consumeResetToken(token: string): Promise<string | null> {

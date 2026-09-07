@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { MailerService } from "../mailer/mailer.service";
 import { inviteToken, numToRole, roleToNum, slugify, uniqueSuffix } from "../../common/utils/roles";
 
 export interface WorkspaceRow {
@@ -50,7 +51,10 @@ export function serializeMember(m: {
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailer: MailerService,
+  ) {}
 
   async workspaceOrThrow(slug: string): Promise<WorkspaceRow> {
     const ws = await this.prisma.workspace.findFirst({ where: { slug, deletedAt: null } });
@@ -179,22 +183,23 @@ export class WorkspacesService {
     return rows.map((r) => ({ id: r.id, email: r.email, role: roleToNum(r.role), token: r.token, accepted: r.accepted }));
   }
 
-  async invite(workspaceId: string, email: string, role: unknown): Promise<Record<string, unknown>> {
+  async invite(workspaceId: string, email: string, role: unknown, inviterName?: string): Promise<Record<string, unknown>> {
     const clean = email.trim().toLowerCase();
     // Re-invite: refresh the existing row (unique [email, workspace]) instead of failing.
     const existing = await this.prisma.workspaceMemberInvite.findFirst({ where: { workspaceId, email: clean } });
+    let row;
     if (existing) {
-      const updated = await this.prisma.workspaceMemberInvite.update({
+      row = await this.prisma.workspaceMemberInvite.update({
         where: { id: existing.id },
         data: { accepted: false, respondedAt: null, role: numToRole(role), token: inviteToken() },
       });
-      // TODO: SMTP invitation email when SMTP_* configured
-      return { id: updated.id, email: updated.email, role: roleToNum(updated.role), token: updated.token };
+    } else {
+      row = await this.prisma.workspaceMemberInvite.create({
+        data: { workspaceId, email: clean, role: numToRole(role), token: inviteToken() },
+      });
     }
-    const row = await this.prisma.workspaceMemberInvite.create({
-      data: { workspaceId, email: clean, role: numToRole(role), token: inviteToken() },
-    });
-    // TODO: SMTP invitation email when SMTP_* configured
+    const ws = await this.prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });
+    await this.mailer.sendWorkspaceInvite(clean, ws.name, inviterName ?? "A teammate");
     return { id: row.id, email: row.email, role: roleToNum(row.role), token: row.token };
   }
 
