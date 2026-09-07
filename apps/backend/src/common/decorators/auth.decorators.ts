@@ -21,5 +21,5 @@ export const Roles = (...roles: Array<"ADMIN" | "MEMBER" | "GUEST">): MethodDeco
   SetMetadata(ROLES_KEY, roles);
 
 export const LEVEL_KEY = "level";
-export const Level = (level: "WORKSPACE" | "PROJECT"): MethodDecorator & ClassDecorator =>
+export const Level = (level: "WORKSPACE" | "PROJECT" | "NONE"): MethodDecorator & ClassDecorator =>
   SetMetadata(LEVEL_KEY, level);

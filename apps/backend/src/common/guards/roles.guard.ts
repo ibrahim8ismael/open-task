@@ -27,6 +27,8 @@ export class RolesGuard implements CanActivate {
     const roles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [ctx.getHandler(), ctx.getClass()]);
     const level = this.reflector.getAllAndOverride<string>(LEVEL_KEY, [ctx.getHandler(), ctx.getClass()]);
     if (!roles && !level) return true;
+    // NONE: authenticated, no workspace/project membership required (e.g. invite join)
+    if (level === "NONE") return true;
     const req = ctx.switchToHttp().getRequest();
     const userId: string | undefined = req.user?.id;
     if (!userId) return false;
