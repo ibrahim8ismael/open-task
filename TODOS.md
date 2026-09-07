@@ -49,7 +49,7 @@
 
 ## Phase B2 — Cycles + modules (2–3 days, ref `docs/02 §2.5`, `docs/03 §3.3`, `docs/04 §4.5`)
 
-- [ ] B2.1 Models: Cycle(+CycleIssue), Module(+ModuleMember,ModuleIssue,ModuleLink); new cycle `sortOrder=MIN-10000`; unique pairs partial
+- [x] B2.1 Models: Cycle(+CycleIssue join, CycleUserProperties), Module(+ModuleMember, ModuleIssue, ModuleLink, ModuleUserProperties) + migration `20260907115740_b2_cycles_modules` (partial unique module name/project; new cycle sortOrder = MIN-10000 applied in service)
 - [ ] B2.2 Endpoints: cycles CRUD + cycle-issues + transfer-issues `{new_cycle_id}` (freeze old `progressSnapshot`) + progress (live counts by `state.group` + estimates, snapshot if set) + archive + user-properties + archived-cycles + date-check; modules mirror + module-links + archived-modules
 - [ ] B2.3 Rules: block edits if `cycle.endDate` passed (400); archive sets `archivedAt` + separate lists
 - [ ] B2.4 Verify: web Cycles burndown + Modules grouping/progress work

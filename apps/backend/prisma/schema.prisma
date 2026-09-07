@@ -643,3 +643,129 @@ model ProjectUserProperty {
   @@unique([userId, projectId])
   @@map("project_user_properties")
 }
+
+// ---------- B2: cycles ----------
+
+model Cycle {
+  id               String    @id @default(uuid()) @db.Uuid
+  projectId        String    @db.Uuid
+  workspaceId      String    @db.Uuid
+  name             String
+  description      String    @default("")
+  startDate        DateTime?
+  endDate          DateTime?
+  ownedById        String    @db.Uuid
+  progressSnapshot Json      @default("{}")
+  sortOrder        Float     @default(65535)
+  archivedAt       DateTime?
+  timezone         String    @default("UTC")
+  version          Int       @default(1)
+  createdBy        String?   @db.Uuid
+  updatedBy        String?   @db.Uuid
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  issues CycleIssue[]
+
+  @@map("cycles")
+}
+
+model CycleIssue {
+  cycleId String @db.Uuid
+  cycle   Cycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  issueId String @db.Uuid
+
+  @@id([cycleId, issueId])
+  @@map("cycle_issues")
+}
+
+model CycleUserProperties {
+  id                String @id @default(uuid()) @db.Uuid
+  cycleId           String @db.Uuid
+  userId            String @db.Uuid
+  filters           Json   @default("{}")
+  displayFilters    Json   @default("{}")
+  displayProperties Json   @default("{}")
+  richFilters       Json   @default("{}")
+
+  @@unique([cycleId, userId])
+  @@map("cycle_user_properties")
+}
+
+// ---------- B2: modules ----------
+
+enum ModuleStatus {
+  backlog
+  planned
+  in_progress
+  paused
+  completed
+  cancelled
+}
+
+model Module {
+  id          String       @id @default(uuid()) @db.Uuid
+  projectId   String       @db.Uuid
+  workspaceId String       @db.Uuid
+  name        String
+  description String       @default("")
+  startDate   DateTime?    @db.Date
+  targetDate  DateTime?    @db.Date
+  status      ModuleStatus @default(planned)
+  leadId      String?      @db.Uuid
+  sortOrder   Float        @default(65535)
+  archivedAt  DateTime?
+  createdBy   String?      @db.Uuid
+  updatedBy   String?      @db.Uuid
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  members ModuleMember[]
+  issues  ModuleIssue[]
+
+  @@map("modules")
+}
+
+model ModuleMember {
+  moduleId String @db.Uuid
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  memberId String @db.Uuid
+
+  @@id([moduleId, memberId])
+  @@map("module_members")
+}
+
+model ModuleIssue {
+  moduleId String @db.Uuid
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  issueId  String @db.Uuid
+
+  @@id([moduleId, issueId])
+  @@map("module_issues")
+}
+
+model ModuleLink {
+  id       String @id @default(uuid()) @db.Uuid
+  moduleId String @db.Uuid
+  title    String?
+  url      String
+  metadata Json   @default("{}")
+
+  @@index([moduleId])
+  @@map("module_links")
+}
+
+model ModuleUserProperties {
+  id                String @id @default(uuid()) @db.Uuid
+  moduleId          String @db.Uuid
+  userId            String @db.Uuid
+  filters           Json   @default("{}")
+  displayFilters    Json   @default("{}")
+  displayProperties Json   @default("{}")
+  richFilters       Json   @default("{}")
+
+  @@unique([moduleId, userId])
+  @@map("module_user_properties")
+}
