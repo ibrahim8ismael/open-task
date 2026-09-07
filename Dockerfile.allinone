@@ -1,0 +1,90 @@
+# syntax=docker/dockerfile:1.7
+# ============================================================================
+# All-in-one image: PostgreSQL 16 + backend (NestJS) + frontend (static SPA)
+#
+# Build (from repo root):
+#   docker build -f Dockerfile.allinone -t open-task:allinone .
+#   # or: docker compose -f docker-compose.allinone.yml up -d --build
+#
+# Runtime layout:
+#   /data/pg        postgres data (PGDATA)
+#   /data/uploads   uploaded files (UPLOAD_DIR)
+#   /data/exports   export files   (EXPORT_DIR)
+#   /app/backend    backend dist + prisma + prod node_modules
+#   /srv/web        frontend static build (served by caddy on :3000)
+#
+# Processes are managed by supervisord:
+#   postgres (:5432 local) -> backend (:4040) + caddy (:3000)
+# ============================================================================
+
+# ---------------------------- shared base ----------------------------------
+FROM node:22-alpine AS base
+RUN npm install -g pnpm@11.10.0
+WORKDIR /app
+
+# ---------------------------- backend build ---------------------------------
+FROM base AS backend-build
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
+COPY patches ./patches
+COPY apps/backend/package.json ./apps/backend/package.json
+# Full package: pnpm symlinks it, and the backend tsconfig extends its files
+COPY packages/typescript-config ./packages/typescript-config
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --filter=backend --frozen-lockfile --store-dir=/pnpm/store
+COPY apps/backend ./apps/backend
+# prisma.config.ts requires DATABASE_URL to be present even for `generate`
+# (no connection is made).
+RUN export DATABASE_URL=postgresql://placeholder && pnpm --filter backend db:generate && pnpm --filter backend build
+
+FROM node:22-alpine AS backend-runtime
+WORKDIR /app/backend
+# Runtime deps only; prisma CLI (devDep) added so migrations + client
+# generation are possible inside the image.
+COPY apps/backend/package.json ./
+# npm cannot handle pnpm "workspace:" protocol refs — strip them first.
+RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));for(const s of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){for(const k of Object.keys(p[s]||{}))if(String(p[s][k]).startsWith('workspace:'))delete p[s][k]}fs.writeFileSync('package.json',JSON.stringify(p))" \
+  && npm install --omit=dev --legacy-peer-deps && npm install --no-save --legacy-peer-deps "prisma@^7"
+COPY apps/backend/prisma.config.ts ./
+COPY apps/backend/prisma ./prisma
+RUN DATABASE_URL=postgresql://placeholder ./node_modules/.bin/prisma generate
+COPY --from=backend-build /app/apps/backend/dist ./dist
+
+# ---------------------------- web build -------------------------------------
+FROM base AS web-build
+RUN npm install -g turbo@2.10.11
+COPY . .
+ARG VITE_API_BASE_URL=http://localhost:4040
+ARG VITE_WEB_BASE_URL=http://localhost:3000
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    VITE_WEB_BASE_URL=$VITE_WEB_BASE_URL \
+    NODE_ENV=production \
+    TURBO_TELEMETRY_DISABLED=1
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --filter=web... --frozen-lockfile --store-dir=/pnpm/store
+RUN turbo run build --filter=web
+
+# ---------------------------- runtime ---------------------------------------
+FROM node:22-alpine AS runtime
+# postgresql16(-client): database; su-exec: drop privileges for initdb/postgres;
+# supervisor: process manager; caddy: static file server for the SPA.
+RUN apk add --no-cache postgresql16 postgresql16-client su-exec supervisor caddy
+# Alpine puts postgres server binaries (postgres, initdb, pg_ctl) here
+ENV PATH="/usr/libexec/postgresql16:${PATH}"
+
+COPY --from=backend-runtime /app/backend /app/backend
+COPY --from=web-build /app/apps/web/build/client /srv/web
+COPY docker/Caddyfile.allinone /etc/caddy/Caddyfile
+COPY docker/supervisord.conf /app/docker/supervisord.conf
+COPY docker/entrypoint.sh docker/start-backend.sh /app/docker/
+RUN chmod +x /app/docker/entrypoint.sh /app/docker/start-backend.sh
+
+ENV NODE_ENV=production \
+    PORT=4040 \
+    PGDATA=/data/pg \
+    UPLOAD_DIR=/data/uploads \
+    EXPORT_DIR=/data/exports
+
+VOLUME /data
+EXPOSE 3000 4040
+
+WORKDIR /app/backend
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["supervisord", "-n", "-c", "/app/docker/supervisord.conf"]

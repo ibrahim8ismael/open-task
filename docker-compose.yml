@@ -18,7 +18,8 @@ services:
 
   backend:
     build:
-      context: ./apps/backend
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
     restart: unless-stopped
     depends_on:
       db:
@@ -33,7 +34,8 @@ services:
     ports:
       - "4040:4040"
     volumes:
-      - ./uploads:/app/apps/backend/uploads
+      - ./uploads:/app/backend/uploads
+      - ./exports:/app/backend/exports
       - ./exports:/app/apps/backend/exports
 
   web:

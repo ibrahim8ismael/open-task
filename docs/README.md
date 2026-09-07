@@ -15,6 +15,7 @@
 3. `03-business-logic.md` — sequence IDs, completed_at sync, soft-delete, cycle/module progress, permissions, background rules
 4. `04-api-contracts.md` — REST endpoints the TS backend must implement to satisfy `apps/web/core/services`
 5. `05-backend-build-plan.md` — phased build order for backend + DB
+6. `06-frontend-routes.md` — all page routes for `apps/web`, `apps/admin`, `apps/space` (React Router v7 configs)
 
 ## Quick decisions
 
