@@ -950,3 +950,77 @@ model RecentVisit {
   @@index([workspaceId, userId])
   @@map("recent_visits")
 }
+
+// ---------- B4: ops ----------
+
+model ExporterHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @db.Uuid
+  projectIds    String[]
+  initiatedById String   @db.Uuid
+  provider      String
+  token         String   @unique
+  filePath      String?
+  createdAt     DateTime @default(now())
+
+  @@map("exporter_history")
+}
+
+model Webhook {
+  id         String   @id @default(uuid()) @db.Uuid
+  workspaceId String  @db.Uuid
+  url        String
+  secretKey  String
+  isActive   Boolean  @default(true)
+  events     Json     @default("[\"*\"]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  @@unique([workspaceId, url])
+  @@map("webhooks")
+}
+
+model WebhookLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @db.Uuid
+  webhookId    String   @db.Uuid
+  eventType    String?
+  requestBody  String?
+  responseCode Int?
+  responseBody String?
+  retryCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([webhookId])
+  @@map("webhook_logs")
+}
+
+model APIToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  workspaceId String?   @db.Uuid
+  label       String    @default("")
+  description String    @default("")
+  token       String    @unique
+  isActive    Boolean   @default(true)
+  expiredAt   DateTime?
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("api_tokens")
+}
+
+model APIActivityLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  tokenIdentifier String?
+  path            String
+  method          String
+  queryParams     String?
+  responseCode    Int?
+  ipAddress       String?
+  createdAt       DateTime @default(now())
+
+  @@index([tokenIdentifier])
+  @@map("api_activity_logs")
+}

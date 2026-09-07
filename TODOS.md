@@ -71,7 +71,7 @@
 
 ## Phase B4 — Files / export / webhooks / tokens / crons (2 days, ref `docs/03 §3.6-3.7`, `docs/04 §4.6`)
 
-- [ ] B4.1 Files: `FileAsset` local upload + meta, `FILE_SIZE_LIMIT=5MB`, orphan (`isUploaded=false` >24h) GC cron
+- [x] B4.1 Files: `FileAsset` local upload + meta, `FILE_SIZE_LIMIT=5MB` (done in B1 assets module; orphan GC lands in B4.5) + ops models migration `b4-ops-models` (ExporterHistory/Webhook/WebhookLog/APIToken/APIActivityLog)
 - [ ] B4.2 Export: `ExporterHistory{workspace,projectIds[],provider csv|xlsx|json,token}`; `POST|GET /.../export-issues/` async build zip → 7d URL; expired GC
 - [ ] B4.3 Webhooks: `Webhook{url http/https no-localhost, secretKey plane_wh_*, isActive}` unique workspace/url; `CRUD + regenerate + logs`; HMAC POST + retry + `WebhookLog` + retention purge; secret hidden unless `?show_secret`
 - [ ] B4.4 Tokens: `APIToken{token plane_api_*, isActive, expiredAt}`; `GET|POST|DELETE /api/users/api-tokens/`; `X-Api-Token` guard + 60/min limit
