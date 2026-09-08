@@ -10,8 +10,12 @@ export class ProjectsController {
 
   @Get()
   @Roles("GUEST")
-  list(@Param("slug") slug: string, @Query("archived") archived?: string): Promise<Record<string, unknown>[]> {
-    return this.projects.list(slug, archived === "true" || archived === "1");
+  list(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Query("archived") archived?: string,
+  ): Promise<Record<string, unknown>[]> {
+    return this.projects.list(slug, archived === "true" || archived === "1", user?.id);
   }
 
   @Post()
@@ -27,20 +31,31 @@ export class ProjectsController {
   // NOTE: literal "details" must register before ":id" or Express matches it as an id.
   @Get("details")
   @Roles("GUEST")
-  detailsList(@Param("slug") slug: string): Promise<Record<string, unknown>[]> {
-    return this.projects.detailsList(slug);
+  detailsList(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>[]> {
+    return this.projects.detailsList(slug, user?.id);
   }
 
   @Get(":id/details")
   @Roles("GUEST")
-  details(@Param("slug") slug: string, @Param("id") id: string): Promise<Record<string, unknown>> {
-    return this.projects.details(slug, id);
+  details(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>> {
+    return this.projects.details(slug, id, user?.id);
   }
 
   @Get(":id")
   @Roles("GUEST")
-  get(@Param("slug") slug: string, @Param("id") id: string): Promise<Record<string, unknown>> {
-    return this.projects.details(slug, id);
+  get(
+    @Param("slug") slug: string,
+    @Param("id") id: string,
+    @CurrentUser() user: RequestUser,
+  ): Promise<Record<string, unknown>> {
+    return this.projects.details(slug, id, user?.id);
   }
 
   @Put(":id")

@@ -29,7 +29,10 @@ interface ProjectRow {
   updatedAt: Date;
 }
 
-export function serializeProject(p: ProjectRow): Record<string, unknown> {
+export function serializeProject(
+  p: ProjectRow,
+  opts?: { memberRole?: number | null; isFavorite?: boolean },
+): Record<string, unknown> {
   return {
     id: p.id,
     workspace: p.workspaceId,
@@ -53,6 +56,11 @@ export function serializeProject(p: ProjectRow): Record<string, unknown> {
     estimate: p.estimateId ?? null,
     created_at: p.createdAt,
     updated_at: p.updatedAt,
+    // Plane web expects these for sidebar filtering
+    member_role: opts?.memberRole ?? null,
+    is_favorite: opts?.isFavorite ?? false,
+    sort_order: 65535,
+    logo_props: p.emoji ? { in_use: "emoji", emoji: { value: p.emoji } } : { in_use: "none" },
   };
 }
 
@@ -71,7 +79,7 @@ export class ProjectsService {
     return p;
   }
 
-  async list(workspaceSlug: string, includeArchived = false): Promise<Record<string, unknown>[]> {
+  async list(workspaceSlug: string, includeArchived = false, userId?: string): Promise<Record<string, unknown>[]> {
     const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
     const rows = await this.prisma.project.findMany({
       where: {
@@ -81,16 +89,26 @@ export class ProjectsService {
       },
       orderBy: { createdAt: "asc" },
     });
-    return rows.map(serializeProject);
+    if (!userId) return rows.map((r) => serializeProject(r));
+    const members = await this.prisma.projectMember.findMany({
+      where: { workspaceId: ws.id, memberId: userId, projectId: { in: rows.map((r) => r.id) }, isActive: true, deletedAt: null },
+    });
+    const roleByProject = new Map(members.map((m) => [m.projectId, m.role === "ADMIN" ? 20 : m.role === "MEMBER" ? 15 : 5]));
+    return rows.map((r) => serializeProject(r, { memberRole: roleByProject.get(r.id) ?? null }));
   }
 
-  async details(workspaceSlug: string, projectId: string): Promise<Record<string, unknown>> {
+  async details(workspaceSlug: string, projectId: string, userId?: string): Promise<Record<string, unknown>> {
     const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
     const p = await this.projectOrThrow(ws.id, projectId);
     const totalMembers = await this.prisma.projectMember.count({
       where: { projectId: p.id, isActive: true, deletedAt: null },
     });
-    return { ...serializeProject(p), total_members: totalMembers, workspace_detail: serializeWorkspace(ws) };
+    let memberRole: number | null = null;
+    if (userId) {
+      const pm = await this.prisma.projectMember.findFirst({ where: { projectId: p.id, memberId: userId, isActive: true, deletedAt: null } });
+      if (pm) memberRole = pm.role === "ADMIN" ? 20 : pm.role === "MEMBER" ? 15 : 5;
+    }
+    return { ...serializeProject(p, { memberRole }), total_members: totalMembers, workspace_detail: serializeWorkspace(ws) };
   }
 
   async create(
@@ -145,7 +163,7 @@ export class ProjectsService {
       return tx.project.update({ where: { id: project.id }, data: { defaultStateId } });
     });
     this.webhooks.fire(ws.id, "project.created", { id: created.id, workspace: ws.id, name: created.name });
-    return serializeProject(created);
+    return serializeProject(created, { memberRole: 20 });
   }
 
   async update(
@@ -308,18 +326,25 @@ export class ProjectsService {
     return rows.map((r) => ({ id: r.id, name: r.identifier, project: r.id }));
   }
 
-  async detailsList(workspaceSlug: string): Promise<Record<string, unknown>[]> {
+  async detailsList(workspaceSlug: string, userId?: string): Promise<Record<string, unknown>[]> {
     const ws = await this.workspaces.workspaceOrThrow(workspaceSlug);
     const rows = await this.prisma.project.findMany({
       where: { workspaceId: ws.id, deletedAt: null },
       orderBy: { createdAt: "asc" },
     });
+    let roleByProject = new Map<string, number>();
+    if (userId) {
+      const members = await this.prisma.projectMember.findMany({
+        where: { workspaceId: ws.id, memberId: userId, projectId: { in: rows.map((r) => r.id) }, isActive: true, deletedAt: null },
+      });
+      roleByProject = new Map(members.map((m) => [m.projectId, m.role === "ADMIN" ? 20 : m.role === "MEMBER" ? 15 : 5]));
+    }
     const withCounts = await Promise.all(
       rows.map(async (p) => {
         const totalMembers = await this.prisma.projectMember.count({
           where: { projectId: p.id, isActive: true, deletedAt: null },
         });
-        return Object.assign(serializeProject(p), { total_members: totalMembers });
+        return Object.assign(serializeProject(p, { memberRole: roleByProject.get(p.id) ?? null }), { total_members: totalMembers });
       }),
     );
     return withCounts;

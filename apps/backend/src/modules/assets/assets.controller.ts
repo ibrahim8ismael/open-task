@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Res,
   UploadedFile,
@@ -33,6 +34,63 @@ export class AssetsController {
     @Body() dto: { name: string; type?: string; size?: number },
   ) {
     return this.assets.registerAttachment(slug, pid, iid, user.id, dto);
+  }
+
+  // --- generic workspace/project assets (cover images, etc.) — stubs for frontend ---
+  @Post("api/assets/v2/workspaces/:slug/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  registerWorkspaceAsset(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Body() dto: Record<string, unknown>,
+  ) {
+    return this.assets.registerGenericAsset(slug, user.id, dto as never);
+  }
+
+  @Patch("api/assets/v2/workspaces/:slug/:assetId/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  markWorkspaceAsset(@Param("assetId") assetId: string) {
+    return this.assets.markAssetUploaded(assetId);
+  }
+
+  @Post("api/assets/v2/workspaces/:slug/:entityId/bulk/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  bulkWorkspace(
+    @Param("entityId") entityId: string,
+    @Body() dto: { asset_ids: string[] },
+  ) {
+    return this.assets.bulkUpdateAssets(entityId, dto.asset_ids ?? []);
+  }
+
+  @Post("api/assets/v2/workspaces/:slug/projects/:pid/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  registerProjectAsset(
+    @Param("slug") slug: string,
+    @CurrentUser() user: RequestUser,
+    @Body() dto: Record<string, unknown>,
+  ) {
+    return this.assets.registerGenericAsset(slug, user.id, dto as never);
+  }
+
+  @Patch("api/assets/v2/workspaces/:slug/projects/:pid/:assetId/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  markProjectAsset(@Param("assetId") assetId: string) {
+    return this.assets.markAssetUploaded(assetId);
+  }
+
+  @Post("api/assets/v2/workspaces/:slug/projects/:pid/:entityId/bulk/")
+  @Roles("MEMBER")
+  @Level("WORKSPACE")
+  bulkProject(
+    @Param("entityId") entityId: string,
+    @Body() dto: { asset_ids: string[] },
+  ) {
+    return this.assets.bulkUpdateAssets(entityId, dto.asset_ids ?? []);
   }
 
   @Public()
