@@ -78,13 +78,17 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
             isUserAsset: false,
           });
         } catch (error) {
-          console.error("Error uploading cover image:", error);
+          console.error("Error uploading cover image (non-blocking):", error);
+          // Don't block project creation if cover upload fails — user said they don't care about cover
           setToast({
             type: TOAST_TYPE.ERROR,
             title: t("toast.error"),
-            message: error instanceof Error ? error.message : "Failed to upload cover image",
+            message: "Cover image upload failed, creating project without it",
           });
-          return Promise.reject(error);
+          uploadedAssetUrl = null;
+          // clear cover so project is created without it (use any to bypass readonly)
+          (formData as unknown as Record<string, unknown>).cover_image = null;
+          (formData as unknown as Record<string, unknown>).cover_image_url = null;
         }
       } else {
         formData.cover_image = coverImage;
@@ -95,11 +99,19 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
     return createProject(workspaceSlug.toString(), formData)
       .then(async (res) => {
         if (uploadedAssetUrl) {
-          await updateCoverImageStatus(res.id, uploadedAssetUrl);
-          await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: uploadedAssetUrl });
+          try {
+            await updateCoverImageStatus(res.id, uploadedAssetUrl);
+            await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: uploadedAssetUrl });
+          } catch (e) {
+            console.warn("Cover image post-create update failed (non-blocking):", e);
+          }
         } else if (coverImage && coverImage.startsWith("http")) {
-          await updateCoverImageStatus(res.id, coverImage);
-          await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: coverImage });
+          try {
+            await updateCoverImageStatus(res.id, coverImage);
+            await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: coverImage });
+          } catch (e) {
+            console.warn("Cover image post-create update failed (non-blocking):", e);
+          }
         }
         setToast({
           type: TOAST_TYPE.SUCCESS,
