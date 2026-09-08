@@ -28,7 +28,7 @@ export class WorkspacesController {
   }
 
   @Post()
-  @Roles("MEMBER")
+  @Level("NONE")
   create(@CurrentUser() user: RequestUser, @Body() dto: CreateWorkspaceDto): Promise<Record<string, unknown>> {
     return this.workspaces.create(user.id, dto.name, dto.slug, dto.organization_size);
   }
@@ -164,7 +164,7 @@ export class WorkspaceMiscController {
 
   @Public()
   @Get("api/workspace-slug-check")
-  slugCheck(@Query("slug") slug: string): Promise<{ available: boolean }> {
+  slugCheck(@Query("slug") slug: string): Promise<{ available: boolean; status: boolean }> {
     return this.workspaces.slugAvailable(slug ?? "");
   }
 

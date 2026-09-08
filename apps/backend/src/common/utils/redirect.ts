@@ -7,10 +7,20 @@ export function safeRedirectUrl(webBase: string, nextPath?: string, params?: Rec
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\") || path.includes(":")) {
     path = "";
   }
-  // Strip query/hash smuggling from the path itself
-  path = path.split("?")[0].split("#")[0].replace(/\/+$/, "") || "";
+  // Strip query/hash smuggling from the path itself; keep "/" distinct from "".
+  const raw = path.split("?")[0].split("#")[0];
+  if (raw === "/") {
+    path = "/";
+  } else {
+    path = raw.replace(/\/+$/, "") || "";
+  }
   const qs = params ? new URLSearchParams(params).toString() : "";
-  return `${base}${path || ""}${qs ? `?${qs}` : ""}`;
+  // When we are rendering an error banner via the query string, ensure the URL
+  // has an explicit "/" so `/ ?error_code=` does not become `http://host?error_code=`
+  // (Caddy and the SPA treat both as "/", but the shorter form made the error
+  // invisible during debugging and some proxies drop the empty-path variant).
+  if (!path && qs) path = "/";
+  return `${base}${path}${qs ? `?${qs}` : ""}`;
 }
 
 export function authErrorRedirect(

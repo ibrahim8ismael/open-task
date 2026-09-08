@@ -34,6 +34,26 @@ export class UsersController {
     return this.users.updateMyProfile(user.id, dto);
   }
 
+  @Patch("onboard")
+  onboard(@CurrentUser() user: RequestUser, @Body() dto: UpdateProfileDto): Promise<Record<string, unknown>> {
+    return this.users.updateMyProfile(user.id, { is_onboarded: dto.is_onboarded ?? true });
+  }
+
+  @Patch("onboard/")
+  onboardSlash(@CurrentUser() user: RequestUser, @Body() dto: UpdateProfileDto): Promise<Record<string, unknown>> {
+    return this.users.updateMyProfile(user.id, { is_onboarded: dto.is_onboarded ?? true });
+  }
+
+  @Patch("tour-completed")
+  tourCompleted(@CurrentUser() user: RequestUser, @Body() dto: UpdateProfileDto): Promise<Record<string, unknown>> {
+    return this.users.updateMyProfile(user.id, { is_tour_completed: dto.is_tour_completed ?? true });
+  }
+
+  @Patch("tour-completed/")
+  tourCompletedSlash(@CurrentUser() user: RequestUser, @Body() dto: UpdateProfileDto): Promise<Record<string, unknown>> {
+    return this.users.updateMyProfile(user.id, { is_tour_completed: dto.is_tour_completed ?? true });
+  }
+
   @Get("settings")
   async settings(@CurrentUser() user: RequestUser): Promise<Record<string, unknown>> {
     const row = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });

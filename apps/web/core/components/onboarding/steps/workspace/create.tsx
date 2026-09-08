@@ -72,8 +72,9 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
     if (isSubmitting) return;
 
     try {
-      const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status: boolean };
-      if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {
+      const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status?: boolean; available?: boolean };
+      const isAvailable = (res as { status?: boolean; available?: boolean })?.status ?? (res as { status?: boolean; available?: boolean })?.available ?? false;
+      if (isAvailable === true && !RESTRICTED_URLS.includes(formData.slug)) {
         setSlugError(false);
         try {
           const workspaceResponse = await createWorkspace(formData);

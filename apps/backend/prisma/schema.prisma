@@ -78,6 +78,8 @@ model Profile {
   language        String  @default("en")
   theme           Json    @default("{}")
   isOnboarded     Boolean @default(false)
+  isTourCompleted Boolean @default(false)
+  onboardingStep  Json    @default("{\"workspace_join\": false, \"profile_complete\": false, \"workspace_create\": false, \"workspace_invite\": false}")
   lastWorkspaceId String? @db.Uuid
   startOfWeek     Int     @default(0)
 

@@ -34,7 +34,7 @@ export class RolesGuard implements CanActivate {
     if (!userId) return false;
     const need = minRank(roles);
 
-    const slug: string | undefined = req.params?.slug ?? req.body?.slug ?? req.query?.slug;
+    const slug: string | undefined = req.params?.slug ?? req.query?.slug;
     if (slug) {
       const ws = await this.prisma.workspace.findFirst({ where: { slug, deletedAt: null } });
       if (!ws) throw new ForbiddenException({ detail: "Workspace not found." });

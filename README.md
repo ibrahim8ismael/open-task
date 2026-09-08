@@ -27,7 +27,8 @@ Environment (backend): `DATABASE_URL`, `SESSION_SECRET`, `WEB_BASE_URL`, `PORT=4
 `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` (>=12 chars, only used to bootstrap missing
 admin accounts), `SMTP_*` (optional; email fanout stub until set), `UPLOAD_PROVIDER=local`,
 `FILE_SIZE_LIMIT` (bytes, default 5MB), `EXPORT_DIR`, `HARD_DELETE_AFTER_DAYS` (default 30),
-`WEBHOOK_ALLOW_PRIVATE` (dev only — never set in prod).
+`WEBHOOK_ALLOW_PRIVATE` (dev only — never set in prod), `COOKIE_SECURE` (empty=auto —
+secure only when `WEB_BASE_URL` is `https://`; fixes login loop on plain-http compose).
 
 ## Backups (Postgres volume `pgdata`)
 

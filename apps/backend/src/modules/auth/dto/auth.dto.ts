@@ -67,6 +67,12 @@ export class UpdateProfileDto {
   is_onboarded?: boolean;
 
   @IsOptional()
+  is_tour_completed?: boolean;
+
+  @IsOptional()
+  onboarding_step?: Record<string, unknown>;
+
+  @IsOptional()
   @IsString()
   last_workspace_id?: string;
 

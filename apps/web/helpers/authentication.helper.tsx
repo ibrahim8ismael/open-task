@@ -100,6 +100,12 @@ export enum EAuthenticationErrorCodes {
   ADMIN_USER_DEACTIVATED = "5190",
   // Rate limit
   RATE_LIMIT_EXCEEDED = "5900",
+  // Backend string codes (Nest) — kept alongside the legacy numeric plane codes
+  // because the current `/auth/*` endpoints emit human-readable strings like
+  // `INVALID_CSRF` / `RATE_LIMITED`. They are rendered as banner alerts here
+  // so a CSRF or throttle failure is never a silent "back to login" loop.
+  INVALID_CSRF = "INVALID_CSRF",
+  RATE_LIMITED = "RATE_LIMITED",
 }
 
 export type TAuthErrorInfo = {
@@ -375,9 +381,40 @@ const errorCodeMessages: {
     title: "",
     message: () => `Rate limit exceeded. Please try again later.`,
   },
+  [EAuthenticationErrorCodes.RATE_LIMITED]: {
+    title: "",
+    message: () => `Rate limit exceeded. Please try again later.`,
+  },
+  [EAuthenticationErrorCodes.INVALID_CSRF]: {
+    title: `Invalid request`,
+    message: () => `Your session expired or the request was invalid. Please refresh the page and try again.`,
+  },
+};
+
+/**
+ * Backend (Nest) emits strings like `USER_ALREADY_EXISTS` while the legacy
+ * Plane frontend expects numeric codes like `5030`. Map the former to the
+ * latter so every auth failure renders a banner instead of a silent loop.
+ */
+export const BACKEND_ERROR_ALIAS: Record<string, EAuthenticationErrorCodes> = {
+  RATE_LIMITED: EAuthenticationErrorCodes.RATE_LIMIT_EXCEEDED,
+  USER_ALREADY_EXISTS: EAuthenticationErrorCodes.USER_ALREADY_EXIST,
+  USER_DOES_NOT_EXIST: EAuthenticationErrorCodes.USER_DOES_NOT_EXIST,
+  INVALID_PASSWORD: EAuthenticationErrorCodes.INVALID_PASSWORD,
+  PASSWORD_TOO_SHORT: EAuthenticationErrorCodes.PASSWORD_TOO_WEAK,
+  REQUIRED_EMAIL_PASSWORD_SIGN_IN: EAuthenticationErrorCodes.REQUIRED_EMAIL_PASSWORD_SIGN_IN,
+  REQUIRED_EMAIL_PASSWORD_SIGN_UP: EAuthenticationErrorCodes.REQUIRED_EMAIL_PASSWORD_SIGN_UP,
+  INVALID_EMAIL_SIGN_IN: EAuthenticationErrorCodes.INVALID_EMAIL_SIGN_IN,
+  INVALID_EMAIL_SIGN_UP: EAuthenticationErrorCodes.INVALID_EMAIL_SIGN_UP,
+  REQUIRED_EMAIL_CODE: EAuthenticationErrorCodes.MAGIC_SIGN_IN_EMAIL_CODE_REQUIRED,
+  CODE_EXPIRED: EAuthenticationErrorCodes.EXPIRED_MAGIC_CODE_SIGN_IN,
+  INVALID_CODE: EAuthenticationErrorCodes.INVALID_MAGIC_CODE_SIGN_IN,
+  USER_INACTIVE: EAuthenticationErrorCodes.USER_ACCOUNT_DEACTIVATED,
 };
 
 export const authErrorHandler = (errorCode: EAuthenticationErrorCodes, email?: string): TAuthErrorInfo | undefined => {
+  // Alias backend strings before the lookup (no-op for numeric codes)
+  const normalized = (BACKEND_ERROR_ALIAS[errorCode as string] as EAuthenticationErrorCodes | undefined) ?? errorCode;
   const bannerAlertErrorCodes = [
     EAuthenticationErrorCodes.INSTANCE_NOT_CONFIGURED,
     EAuthenticationErrorCodes.INVALID_EMAIL,
@@ -430,15 +467,19 @@ export const authErrorHandler = (errorCode: EAuthenticationErrorCodes, email?: s
     EAuthenticationErrorCodes.ADMIN_USER_DOES_NOT_EXIST,
     EAuthenticationErrorCodes.ADMIN_USER_DEACTIVATED,
     EAuthenticationErrorCodes.RATE_LIMIT_EXCEEDED,
+    EAuthenticationErrorCodes.RATE_LIMITED,
+    EAuthenticationErrorCodes.INVALID_CSRF,
     EAuthenticationErrorCodes.PASSWORD_TOO_WEAK,
   ];
 
-  if (bannerAlertErrorCodes.includes(errorCode))
+  // Use normalized for lookup/display; banner list already contains both forms
+  const codeForLookup = normalized as EAuthenticationErrorCodes;
+  if (bannerAlertErrorCodes.includes(codeForLookup))
     return {
       type: EErrorAlertType.BANNER_ALERT,
-      code: errorCode,
-      title: errorCodeMessages[errorCode]?.title || "Error",
-      message: errorCodeMessages[errorCode]?.message(email) || "Something went wrong. Please try again.",
+      code: codeForLookup,
+      title: errorCodeMessages[codeForLookup]?.title || "Error",
+      message: errorCodeMessages[codeForLookup]?.message(email) || "Something went wrong. Please try again.",
     };
 
   return undefined;

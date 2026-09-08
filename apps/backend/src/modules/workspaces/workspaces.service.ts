@@ -82,11 +82,14 @@ export class WorkspacesService {
     const cleanName = (name ?? "").trim();
     if (!cleanName) throw new ForbiddenException({ detail: "Name is required." });
     let candidate = (slug ?? "").trim().toLowerCase() || slugify(cleanName);
+    // Normalize candidate (slugify already lowercases, but custom slug may contain invalid chars)
+    candidate = candidate.replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || slugify(cleanName);
     for (let i = 0; i < 5; i += 1) {
       // Sequential on purpose: each candidate depends on the previous check (max 5 tries).
       // oxlint-disable-next-line eslint(no-await-in-loop)
-      const taken = await this.prisma.workspace.findFirst({ where: { slug: candidate } });
-      if (!taken) break;
+      const taken = await this.prisma.workspace.findFirst({ where: { slug: candidate, deletedAt: null } });
+      const isRestricted = WorkspacesService.RESTRICTED_SLUGS.has(candidate);
+      if (!taken && !isRestricted) break;
       candidate = `${slugify(cleanName)}-${uniqueSuffix()}`;
     }
     const ws = await this.prisma.workspace.create({
@@ -120,11 +123,80 @@ export class WorkspacesService {
     return { detail: "Workspace deleted." };
   }
 
-  async slugAvailable(slug: string): Promise<{ available: boolean }> {
+  // Keep in sync with `packages/constants/src/workspace.ts:RESTRICTED_URLS` and
+  // `apps/api/plane/utils/constants.py:RESTRICTED_WORKSPACE_SLUGS`
+  private static readonly RESTRICTED_SLUGS = new Set([
+    "404",
+    "accounts",
+    "api",
+    "create-workspace",
+    "god-mode",
+    "installations",
+    "invitations",
+    "onboarding",
+    "profile",
+    "spaces",
+    "workspace-invitations",
+    "password",
+    "flags",
+    "monitor",
+    "monitoring",
+    "ingest",
+    "plane-pro",
+    "plane-ultimate",
+    "enterprise",
+    "plane-enterprise",
+    "disco",
+    "silo",
+    "chat",
+    "calendar",
+    "drive",
+    "channels",
+    "upgrade",
+    "billing",
+    "sign-in",
+    "sign-up",
+    "signin",
+    "signup",
+    "config",
+    "live",
+    "admin",
+    "m",
+    "import",
+    "importers",
+    "integrations",
+    "integration",
+    "configuration",
+    "initiatives",
+    "initiative",
+    "workflow",
+    "workflows",
+    "epics",
+    "epic",
+    "story",
+    "mobile",
+    "dashboard",
+    "desktop",
+    "onload",
+    "real-time",
+    "one",
+    "pages",
+    "business",
+    "pro",
+    "settings",
+    "license",
+    "licenses",
+    "instances",
+    "instance",
+  ]);
+
+  async slugAvailable(slug: string): Promise<{ available: boolean; status: boolean }> {
     const clean = (slug ?? "").trim().toLowerCase();
-    if (!clean) return { available: false };
+    if (!clean) return { available: false, status: false };
+    if (WorkspacesService.RESTRICTED_SLUGS.has(clean)) return { available: false, status: false };
     const taken = await this.prisma.workspace.findFirst({ where: { slug: clean, deletedAt: null } });
-    return { available: !taken };
+    const ok = !taken;
+    return { available: ok, status: ok };
   }
 
   // --- members ---

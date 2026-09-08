@@ -38,16 +38,43 @@ function serializeUser(u: {
 }
 
 function serializeProfile(p: {
+  id?: string;
+  userId?: string;
   language: string;
   isOnboarded: boolean;
+  isTourCompleted?: boolean;
+  onboardingStep?: unknown;
   lastWorkspaceId: string | null;
   startOfWeek: number;
+  theme?: unknown;
 }): Record<string, unknown> {
+  const onboardingStep =
+    (p.onboardingStep as Record<string, unknown> | null) ??
+    ({
+      workspace_join: false,
+      profile_complete: false,
+      workspace_create: false,
+      workspace_invite: false,
+    } as Record<string, unknown>);
   return {
+    id: (p as { id?: string }).id,
+    user: (p as { userId?: string }).userId,
     language: p.language,
     is_onboarded: p.isOnboarded,
+    is_tour_completed: (p as { isTourCompleted?: boolean }).isTourCompleted ?? false,
+    onboarding_step: onboardingStep,
     last_workspace_id: p.lastWorkspaceId,
     start_of_week: p.startOfWeek,
+    theme: (p as { theme?: unknown }).theme ?? {},
+    // stub remaining TUserProfile fields so frontend doesn't see undefined
+    role: undefined,
+    use_case: undefined,
+    billing_address_country: undefined,
+    billing_address: undefined,
+    has_billing_address: false,
+    has_marketing_email_consent: false,
+    created_at: "",
+    updated_at: "",
   };
 }
 
@@ -90,12 +117,16 @@ export class UsersService {
         userId,
         ...(dto.language !== undefined ? { language: dto.language } : {}),
         ...(dto.is_onboarded !== undefined ? { isOnboarded: dto.is_onboarded } : {}),
+        ...(dto.is_tour_completed !== undefined ? { isTourCompleted: dto.is_tour_completed } : {}),
+        ...(dto.onboarding_step !== undefined ? { onboardingStep: dto.onboarding_step as object } : {}),
         ...(dto.last_workspace_id !== undefined ? { lastWorkspaceId: dto.last_workspace_id } : {}),
         ...(dto.start_of_week !== undefined ? { startOfWeek: dto.start_of_week } : {}),
       },
       update: {
         ...(dto.language !== undefined ? { language: dto.language } : {}),
         ...(dto.is_onboarded !== undefined ? { isOnboarded: dto.is_onboarded } : {}),
+        ...(dto.is_tour_completed !== undefined ? { isTourCompleted: dto.is_tour_completed } : {}),
+        ...(dto.onboarding_step !== undefined ? { onboardingStep: dto.onboarding_step as object } : {}),
         ...(dto.last_workspace_id !== undefined ? { lastWorkspaceId: dto.last_workspace_id } : {}),
         ...(dto.start_of_week !== undefined ? { startOfWeek: dto.start_of_week } : {}),
       },

@@ -30,6 +30,32 @@ export class AuthService {
     return (process.env.AUTH_RETURN_CODES_DEV ?? "true") !== "false";
   }
 
+  /**
+   * Whether session cookies must carry the `Secure` flag.
+   * Old behavior (`NODE_ENV === "production"`) broke docker-compose and any
+   * plain-http deployment: browsers drop `Secure` cookies on `http`, so the
+   * signup/sign-in 302 succeeded DB-side but no cookie was stored and every
+   * `/api/users/me/` returned 401 -> login loop with no error shown.
+   * New behavior: explicit `COOKIE_SECURE=1/0` wins, otherwise auto-detect
+   * from `WEB_BASE_URL` protocol (https => secure).
+   */
+  cookieSecure(): boolean {
+    const override = (process.env.COOKIE_SECURE ?? "").trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(override)) return true;
+    if (["0", "false", "no", "off"].includes(override)) return false;
+    return this.webBase().toLowerCase().startsWith("https://");
+  }
+
+  cookieOptions(): { httpOnly: boolean; sameSite: "lax"; secure: boolean; path: string; maxAge: number } {
+    return {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: this.cookieSecure(),
+      path: "/",
+      maxAge: SESSION_TTL_MS,
+    };
+  }
+
   // --- users ---
 
   normalizeEmail(email: string): string {
@@ -86,18 +112,13 @@ export class AuthService {
   }
 
   setSessionCookie(res: Response, sessionKey: string): void {
-    res.cookie(SESSION_COOKIE, sessionKey, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: SESSION_TTL_MS,
-    });
+    res.cookie(SESSION_COOKIE, sessionKey, this.cookieOptions());
   }
 
   async destroySession(sessionKey: string | undefined, res: Response): Promise<void> {
     if (sessionKey) await this.prisma.session.delete({ where: { sessionKey } }).catch(() => undefined);
-    res.clearCookie(SESSION_COOKIE, { path: "/" });
+    const { secure, sameSite } = this.cookieOptions();
+    res.clearCookie(SESSION_COOKIE, { path: "/", httpOnly: true, secure, sameSite });
   }
 
   // --- magic codes ---

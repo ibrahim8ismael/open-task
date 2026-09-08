@@ -54,20 +54,23 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   const isEmailBasedAuthEnabled = config?.is_email_password_enabled || config?.is_magic_login_enabled;
   const noAuthMethodsAvailable = !isOAuthEnabled && !isEmailBasedAuthEnabled;
 
+  const error_message = searchParams.get("error_message");
+
   useEffect(() => {
     if (!authMode && currentAuthMode) setAuthMode(currentAuthMode);
   }, [currentAuthMode, authMode]);
 
   useEffect(() => {
     if (error_code && authMode) {
-      const errorhandler = authErrorHandler(error_code?.toString() as EAuthenticationErrorCodes);
-      if (errorhandler) {
+      const raw = error_code?.toString() as EAuthenticationErrorCodes;
+      const handled = authErrorHandler(raw, emailParam?.toString() || email);
+      if (handled) {
         // password error handler
-        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_UP].includes(errorhandler.code)) {
+        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_UP].includes(handled.code)) {
           setAuthMode(EAuthModes.SIGN_UP);
           setAuthStep(EAuthSteps.PASSWORD);
         }
-        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_IN].includes(errorhandler.code)) {
+        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_IN].includes(handled.code)) {
           setAuthMode(EAuthModes.SIGN_IN);
           setAuthStep(EAuthSteps.PASSWORD);
         }
@@ -78,7 +81,7 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
             EAuthenticationErrorCodes.INVALID_EMAIL_MAGIC_SIGN_UP,
             EAuthenticationErrorCodes.EXPIRED_MAGIC_CODE_SIGN_UP,
             EAuthenticationErrorCodes.EMAIL_CODE_ATTEMPT_EXHAUSTED_SIGN_UP,
-          ].includes(errorhandler.code)
+          ].includes(handled.code)
         ) {
           setAuthMode(EAuthModes.SIGN_UP);
           setAuthStep(EAuthSteps.UNIQUE_CODE);
@@ -89,16 +92,28 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
             EAuthenticationErrorCodes.INVALID_EMAIL_MAGIC_SIGN_IN,
             EAuthenticationErrorCodes.EXPIRED_MAGIC_CODE_SIGN_IN,
             EAuthenticationErrorCodes.EMAIL_CODE_ATTEMPT_EXHAUSTED_SIGN_IN,
-          ].includes(errorhandler.code)
+          ].includes(handled.code)
         ) {
           setAuthMode(EAuthModes.SIGN_IN);
           setAuthStep(EAuthSteps.UNIQUE_CODE);
         }
 
-        setErrorInfo(errorhandler);
+        setErrorInfo(handled);
+        return;
+      }
+      // Fallback: unknown error_code but backend did provide an error_message.
+      // Render it as a generic banner so the user never sees a silent loop.
+      if (raw) {
+        const fallbackMsg = (error_message && decodeURIComponent(error_message)) || raw.replaceAll("_", " ");
+        setErrorInfo({
+          type: EErrorAlertType.BANNER_ALERT,
+          code: raw,
+          title: "Error",
+          message: fallbackMsg,
+        });
       }
     }
-  }, [error_code, authMode]);
+  }, [error_code, error_message, authMode, email, emailParam]);
 
   if (!authMode) return <></>;
 

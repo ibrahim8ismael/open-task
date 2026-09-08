@@ -68,7 +68,7 @@ export class AuthController {
   @Get("get-csrf-token")
   getCsrf(@Res({ passthrough: true }) res: Response): { csrf_token: string } {
     const token = issueCsrfToken();
-    res.cookie("csrftoken", token, { httpOnly: false, sameSite: "lax", path: "/" });
+    res.cookie("csrftoken", token, { httpOnly: false, sameSite: "lax", secure: this.auth.cookieSecure(), path: "/" });
     return { csrf_token: token };
   }
 

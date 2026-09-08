@@ -7,12 +7,22 @@ import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { cors: false });
+  // Behind Caddy / Docker / LB TLS termination, express must trust the proxy
+  // so `req.ip` / secure detection via `x-forwarded-*` works for throttling.
+  try {
+    app.getHttpAdapter().getInstance().set("trust proxy", 1);
+  } catch {
+    // non-express adapters ignore this
+  }
   app.use(helmet());
   app.use(cookieParser());
   // HTML form POSTs from apps/web auth screens (sign-in/sign-up/magic)
   app.use(urlencoded({ extended: false }));
   app.enableCors({
-    origin: (process.env.WEB_BASE_URL ?? "http://localhost:3000").split(","),
+    origin: (process.env.WEB_BASE_URL ?? "http://localhost:3000")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     credentials: true,
   });
   app.useGlobalPipes(

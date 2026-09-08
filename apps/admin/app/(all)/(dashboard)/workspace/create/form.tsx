@@ -56,8 +56,9 @@ export function WorkspaceCreateForm() {
   const handleCreateWorkspace = async (formData: IWorkspace) => {
     await instanceWorkspaceService
       .slugCheck(formData.slug)
-      .then(async (res) => {
-        if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {
+      .then(async (res: { status?: boolean; available?: boolean }) => {
+        const isAvailable = (res as { status?: boolean; available?: boolean })?.status ?? (res as { status?: boolean; available?: boolean })?.available ?? false;
+        if (isAvailable === true && !RESTRICTED_URLS.includes(formData.slug)) {
           setSlugError(false);
           await createWorkspace(formData)
             .then(async () => {

@@ -3,8 +3,6 @@ import { Public } from "../../common/decorators/auth.decorators";
 
 const flag = (key: string, fallback: string): boolean => (process.env[key] ?? fallback) === "1";
 
-const webUrl = (): string => (process.env.WEB_BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
-
 @Public()
 @Controller("api/instances")
 export class InstancesController {
