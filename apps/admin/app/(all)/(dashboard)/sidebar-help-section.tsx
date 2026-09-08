@@ -37,7 +37,7 @@ const helpOptions = [
   },
   {
     name: "Report a bug",
-    href: "https://github.com/makeplane/plane/issues/new/choose",
+    href: "https://github.com/ibrahim8ismael/open-task",
     Icon: Github,
   },
 ];
