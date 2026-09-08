@@ -47,13 +47,18 @@ type IssueRow = {
   updatedBy: string | null;
 };
 
-export function serializeBaseIssue(i: IssueRow, c: IssueCounts): Record<string, unknown> {
+export function serializeBaseIssue(
+  i: IssueRow,
+  c: IssueCounts,
+  stateGroups?: Map<string, string>,
+): Record<string, unknown> {
   return {
     id: i.id,
     sequence_id: i.sequenceId,
     name: i.name,
     sort_order: i.sortOrder,
     state_id: i.stateId,
+    state__group: i.stateId ? (stateGroups?.get(i.stateId) ?? null) : null,
     priority: i.priority,
     label_ids: c.labels.get(i.id) ?? [],
     assignee_ids: c.assignees.get(i.id) ?? [],

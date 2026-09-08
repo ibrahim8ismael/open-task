@@ -182,9 +182,33 @@ export class IssuesListService {
     const page = rows.slice(0, perPage);
     const hasMore = rows.length > perPage;
     const counts = await this.issues.countsFor(page.map((r) => r.id));
-    const serialized = page.map((r) => serializeBaseIssue(r as never, counts));
+    const stateIds = [...new Set(page.map((r) => r.stateId).filter(Boolean) as string[])];
+    const states = stateIds.length
+      ? await this.prisma.state.findMany({ where: { id: { in: stateIds } }, select: { id: true, group: true } })
+      : [];
+    const stateGroups = new Map(states.map((s) => [s.id, s.group]));
+    const serialized = page.map((r) => serializeBaseIssue(r as never, counts, stateGroups));
 
-    const groupBy = typeof merged.group_by === "string" ? merged.group_by : "";
+    const rawGroupBy = typeof merged.group_by === "string" ? merged.group_by : "";
+    // Normalize frontend aliases: state_id→state, labels__id→labels, assignees__id→assignees, etc.
+    const groupByMap: Record<string, string> = {
+      state_id: "state",
+      state: "state",
+      "state__group": "state",
+      priority: "priority",
+      labels: "labels",
+      labels__id: "labels",
+      assignees: "assignees",
+      assignees__id: "assignees",
+      created_by: "created_by",
+      cycle: "cycle",
+      cycle_id: "cycle",
+      module: "module",
+      module_id: "module",
+    };
+    const normalizedGroupBy = groupByMap[rawGroupBy] ?? rawGroupBy;
+    const shouldGroup = rawGroupBy && rawGroupBy !== "null" && rawGroupBy !== "None";
+    const groupBy = shouldGroup ? normalizedGroupBy : "";
     let results: unknown = serialized;
     if (groupBy) {
       const groups = new Map<string, Record<string, unknown>[]>();
@@ -200,6 +224,11 @@ export class IssuesListService {
           return arr.length ? arr[0] : "None";
         }
         if (groupBy === "created_by") return String(item.created_by ?? "None");
+        if (groupBy === "cycle") return String((item.cycle_id as string) ?? "None");
+        if (groupBy === "module") {
+          const arr = item.module_ids as string[];
+          return arr.length ? arr[0] : "None";
+        }
         return "All";
       };
       for (const item of serialized) {

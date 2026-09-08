@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { DEFAULT_STATES } from "../../common/utils/default-states";
 
 function serializeState(s: {
   id: string;
@@ -16,12 +17,15 @@ function serializeState(s: {
   return {
     id: s.id,
     project: s.projectId,
+    project_id: s.projectId,
     workspace: s.workspaceId,
+    workspace_id: s.workspaceId,
     name: s.name,
     description: s.description,
     color: s.color,
     group: s.group,
     sequence: s.sequence,
+    order: s.sequence,
     default: s.isDefault,
     is_triage: s.isTriage,
   };
@@ -40,8 +44,11 @@ function serializeLabel(l: {
   return {
     id: l.id,
     workspace: l.workspaceId,
+    workspace_id: l.workspaceId,
     project: l.projectId,
+    project_id: l.projectId,
     parent: l.parentId,
+    parent_id: l.parentId,
     name: l.name,
     description: l.description,
     color: l.color,
@@ -70,10 +77,40 @@ export class TaxonomyService {
   async listStates(slug: string, pid: string, includeTriage = false): Promise<Record<string, unknown>[]> {
     const ws = await this.workspaceOrThrow(slug);
     await this.projectOrThrow(ws.id, pid);
-    const rows = await this.prisma.state.findMany({
+    let rows = await this.prisma.state.findMany({
       where: { projectId: pid, deletedAt: null, ...(includeTriage ? {} : { isTriage: false }) },
       orderBy: { sequence: "asc" },
     });
+    // Backfill default states for projects created before seeding or if states were deleted
+    if (rows.length === 0) {
+      const existing = await this.prisma.state.findMany({ where: { projectId: pid, deletedAt: null } });
+      if (existing.length === 0) {
+        let defaultStateId: string | null = null;
+        for (const s of DEFAULT_STATES) {
+          // eslint-disable-next-line no-await-in-loop
+          const st = await this.prisma.state.create({
+            data: {
+              projectId: pid,
+              workspaceId: ws.id,
+              name: s.name,
+              group: s.group as "backlog" | "unstarted" | "started" | "completed" | "cancelled" | "triage",
+              color: s.color,
+              isDefault: s.isDefault,
+              isTriage: s.isTriage,
+              sequence: s.sequence,
+            },
+          });
+          if (s.isDefault) defaultStateId = st.id;
+        }
+        if (defaultStateId) {
+          await this.prisma.project.update({ where: { id: pid }, data: { defaultStateId } }).catch(() => undefined);
+        }
+        rows = await this.prisma.state.findMany({
+          where: { projectId: pid, deletedAt: null, ...(includeTriage ? {} : { isTriage: false }) },
+          orderBy: { sequence: "asc" },
+        });
+      }
+    }
     return rows.map(serializeState);
   }
 
