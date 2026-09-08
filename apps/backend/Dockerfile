@@ -48,7 +48,10 @@ COPY apps/backend/prisma.config.ts ./
 COPY apps/backend/prisma ./prisma
 RUN DATABASE_URL=postgresql://placeholder ./node_modules/.bin/prisma generate
 COPY --from=build /app/apps/backend/dist ./dist
+COPY docker/entrypoint-backend.sh /app/backend/entrypoint-backend.sh
+RUN chmod +x /app/backend/entrypoint-backend.sh
 ENV NODE_ENV=production
 ENV PORT=4040
 EXPOSE 4040
+ENTRYPOINT ["/app/backend/entrypoint-backend.sh"]
 CMD ["node", "dist/main.js"]

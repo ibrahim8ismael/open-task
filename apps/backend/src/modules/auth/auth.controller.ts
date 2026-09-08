@@ -77,7 +77,7 @@ export class AuthController {
   @HttpCode(200)
   async emailCheck(@Body() dto: EmailCheckDto): Promise<IEmailCheckResponseShape> {
     const email = this.auth.normalizeEmail(dto.email);
-    const smtpConfigured = Boolean(process.env.EMAIL_HOST);
+    const smtpConfigured = Boolean(process.env.SMTP_HOST || process.env.EMAIL_HOST);
     const magicEnabled = (process.env.ENABLE_MAGIC_LINK_LOGIN ?? "1") === "1";
     const magicStatus: "MAGIC_CODE" | "CREDENTIAL" = smtpConfigured && magicEnabled ? "MAGIC_CODE" : "CREDENTIAL";
     if (!this.auth.validEmail(email)) return { existing: false, status: magicStatus, is_password_autoset: true };

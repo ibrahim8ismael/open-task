@@ -48,7 +48,7 @@ export class InstancesController {
         has_unsplash_configured: Boolean(process.env.UNSPLASH_ACCESS_KEY),
         has_llm_configured: Boolean(process.env.LLM_API_KEY),
         file_size_limit: Number(process.env.FILE_SIZE_LIMIT ?? 5242880),
-        is_smtp_configured: Boolean(process.env.EMAIL_HOST),
+        is_smtp_configured: Boolean(process.env.SMTP_HOST || process.env.EMAIL_HOST),
         app_base_url: webUrl,
         space_base_url: process.env.SPACE_BASE_URL ?? webUrl,
         admin_base_url: process.env.ADMIN_BASE_URL ?? webUrl,

@@ -1,8 +1,8 @@
 -- DropIndex
-DROP INDEX "issues_name_trgm_idx";
+DROP INDEX IF EXISTS "issues_name_trgm_idx";
 
 -- DropIndex
-DROP INDEX "projects_name_trgm_idx";
+DROP INDEX IF EXISTS "projects_name_trgm_idx";
 
 -- CreateTable
 CREATE TABLE "workspace_user_links" (
