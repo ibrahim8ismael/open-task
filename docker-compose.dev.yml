@@ -35,6 +35,8 @@ services:
       WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
       PORT: 4040
+      API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT:-300/minute}
+      AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-30/minute}
     ports:
       - "4040:4040"
 

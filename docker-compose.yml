@@ -32,6 +32,8 @@ services:
       PORT: 4040
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+      API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT:-300/minute}
+      AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-30/minute}
     ports:
       - "4040:4040"
     volumes:

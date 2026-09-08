@@ -28,7 +28,9 @@ Environment (backend): `DATABASE_URL`, `SESSION_SECRET`, `WEB_BASE_URL`, `PORT=4
 admin accounts), `SMTP_*` (optional; email fanout stub until set), `UPLOAD_PROVIDER=local`,
 `FILE_SIZE_LIMIT` (bytes, default 5MB), `EXPORT_DIR`, `HARD_DELETE_AFTER_DAYS` (default 30),
 `WEBHOOK_ALLOW_PRIVATE` (dev only — never set in prod), `COOKIE_SECURE` (empty=auto —
-secure only when `WEB_BASE_URL` is `https://`; fixes login loop on plain-http compose).
+secure only when `WEB_BASE_URL` is `https://`; fixes login loop on plain-http compose),
+`API_KEY_RATE_LIMIT` (default `300/minute`), `AUTH_RATE_LIMIT` (default `30/minute`,
+per-IP per auth scope — format `"<num>/<period>"` where period is `second|minute|hour`).
 
 ## Backups (Postgres volume `pgdata`)
 

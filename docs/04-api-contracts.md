@@ -94,4 +94,6 @@ GET /api/timezones/ | GET /api/search/?q= (ILIKE v1)
 
 Errors: `{detail|error: string, field_errors?: {}}` with 400/401/403/404/429. Pagination: `{results[], next_cursor?, count}` — support `?per_page&cursor`.
 
+Rate limits (env-tunable, `"<num>/<period>"` where period is `second|minute|hour`): `API_KEY_RATE_LIMIT` default `300/minute` per `X-Api-Token` (429 `{detail:"API key rate limit exceeded."}`) via `SessionAuthGuard`; `AUTH_RATE_LIMIT` default `30/minute` per IP per scope (`sign-in`, `sign-up`, `magic-generate`, `magic`) via `throttleCheck`.
+
 Auth on all `/api/*`: session cookie OR `X-Api-Token`, else 401 → web interceptor redirects `/?next_path=<path>`.

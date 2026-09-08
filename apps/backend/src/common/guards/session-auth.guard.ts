@@ -29,8 +29,8 @@ export class SessionAuthGuard implements CanActivate {
         method: req.method,
       });
       if (res) {
-        // Rate limit per token, default 60/min (docs/04; API_KEY_RATE_LIMIT)
-        const [limit, windowMs] = parseRateLimit(process.env.API_KEY_RATE_LIMIT ?? "60/minute");
+        // Rate limit per token, default 300/min (docs/04; API_KEY_RATE_LIMIT)
+        const [limit, windowMs] = parseRateLimit(process.env.API_KEY_RATE_LIMIT ?? "300/minute");
         if (!throttleCheck(`api-token:${res.tokenId}`, limit, windowMs)) {
           throw new HttpException({ detail: "API key rate limit exceeded." }, 429);
         }

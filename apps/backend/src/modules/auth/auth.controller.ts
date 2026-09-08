@@ -15,7 +15,7 @@ import { compare } from "bcryptjs";
 import { CurrentUser, Public, RequestUser } from "../../common/decorators/auth.decorators";
 import { issueCsrfToken, verifyCsrfToken } from "../../common/utils/csrf";
 import { authErrorRedirect, safeRedirectUrl } from "../../common/utils/redirect";
-import { clientIp, throttleCheck, throttleKey } from "../../common/utils/throttle";
+import { clientIp, parseRateLimit, throttleCheck, throttleKey } from "../../common/utils/throttle";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuthService } from "./auth.service";
 import {
@@ -59,7 +59,8 @@ export class AuthController {
   }
 
   private throttled(req: Request, scope: string): boolean {
-    return !throttleCheck(throttleKey(clientIp(req), scope));
+    const [limit, windowMs] = parseRateLimit(process.env.AUTH_RATE_LIMIT ?? "30/minute");
+    return !throttleCheck(throttleKey(clientIp(req), scope), limit, windowMs);
   }
 
   // --- CSRF + checks (public, JSON) ---
